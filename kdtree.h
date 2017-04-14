@@ -3,6 +3,7 @@
 
 #include <cstdlib>
 #include <vector>
+#include <algorithm>
 #include "boundingbox.h"
 #include "photon.h"
 
@@ -62,4 +63,7 @@ class KDTree {
   int depth;
 };
 
+bool sortByX(const Photon &a, const Photon &b);
+bool sortByY(const Photon &a, const Photon &b);
+bool sortByZ(const Photon &a, const Photon &b);
 #endif
