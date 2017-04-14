@@ -2,7 +2,7 @@
 #include "utils.h"
 
 #define MAX_PHOTONS_BEFORE_SPLIT 100
-#define MAX_DEPTH 15
+#define MAX_DEPTH 100
 
 // ==================================================================
 // DESTRUCTOR
@@ -65,20 +65,20 @@ void KDTree::AddPhoton(const Photon &p) {
     // decide which subnode to recurse into
     if (split_axis == 0) {
       if (position.x < split_value)
-	child1->AddPhoton(p);
+	     child1->AddPhoton(p);
       else
-	child2->AddPhoton(p);
+	     child2->AddPhoton(p);
     } else if (split_axis == 1) {
       if (position.y < split_value)
-	child1->AddPhoton(p);
+	     child1->AddPhoton(p);
       else
-	child2->AddPhoton(p);
+	     child2->AddPhoton(p);
     } else {
       assert (split_axis == 2);
       if (position.z < split_value)
-	child1->AddPhoton(p);
+	     child1->AddPhoton(p);
       else
-	child2->AddPhoton(p);
+	     child2->AddPhoton(p);
     }
   }
 }
@@ -122,14 +122,16 @@ void KDTree::SplitCell() {
   glm::vec3 min1,min2,max1,max2;
   if (dx >= dy && dx >= dz) {
     split_axis = 0;
-    split_value = min.x+dx/2.0;
+    std::sort(photons.begin(),photons.end(),sortByX);
+    split_value = (photons[photons.size()/2 -1].getPosition().x+photons[photons.size()/2].getPosition().x)/2.0f;
     min1 = glm::vec3(min.x    ,min.y,min.z);
     max1 = glm::vec3(split_value,max.y,max.z);
     min2 = glm::vec3(split_value,min.y,min.z);
     max2 = glm::vec3(max.x       ,max.y,max.z);
   } else if (dy >= dx && dy >= dz) {
     split_axis = 1;
-    split_value = min.y+dy/2.0;
+    std::sort(photons.begin(),photons.end(),sortByY);
+    split_value = (photons[photons.size()/2 -1].getPosition().y+photons[photons.size()/2].getPosition().y)/2.0f;
     min1 = glm::vec3(min.x,min.y    ,min.z);
     max1 = glm::vec3(max.x,split_value,max.z);
     min2 = glm::vec3(min.x,split_value,min.z);
@@ -137,7 +139,8 @@ void KDTree::SplitCell() {
   } else {
     assert (dz >= dx && dz >= dy);
     split_axis = 2;
-    split_value = min.z+dz/2.0;
+    std::sort(photons.begin(),photons.end(),sortByZ);
+    split_value = (photons[photons.size()/2 -1].getPosition().z+photons[photons.size()/2].getPosition().z)/2.0f;
     min1 = glm::vec3(min.x,min.y,min.z    );
     max1 = glm::vec3(max.x,max.y,split_value);
     min2 = glm::vec3(min.x,min.y,split_value);
@@ -154,6 +157,19 @@ void KDTree::SplitCell() {
     const Photon &p = tmp[i];
     this->AddPhoton(p);
   }
+}
+
+
+bool sortByX(const Photon &a, const Photon &b) {
+  return a.getPosition().x<b.getPosition().x;
+}
+
+bool sortByY(const Photon &a, const Photon &b) {
+  return a.getPosition().y<b.getPosition().y;
+}
+
+bool sortByZ(const Photon &a, const Photon &b) {
+  return a.getPosition().z<b.getPosition().z;
 }
 
 // ==================================================================
