@@ -63,6 +63,10 @@ public:
           std::string(argv[i]) == std::string("-i")) {
         i++; assert (i < argc); 
         separatePathAndFile(argv[i],path,input_file);
+      } else if (std::string(argv[i]) == std::string("-output") || 
+          std::string(argv[i]) == std::string("-o")) {
+        i++; assert (i < argc);
+        separatePathAndFile(argv[i],out_path,out_file);
       } else if (std::string(argv[i]) == std::string("-size")) {
 	i++; assert (i < argc); 
 	width = atoi(argv[i]);
@@ -136,6 +140,8 @@ public:
     // BASIC RENDERING PARAMETERS
     input_file = "";
     path = "";
+    out_path = "";
+    out_file = "";
     width = 500;
     height = 500;
     raytracing_animation = false;
@@ -173,6 +179,8 @@ public:
   // BASIC RENDERING PARAMETERS
   std::string input_file;
   std::string path;
+  std::string out_path;
+  std::string out_file;
   int width;
   int height;
   bool raytracing_animation;

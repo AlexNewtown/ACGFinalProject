@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <thread>
 #include <atomic>
+#include <fstream>
 
 #include "mesh.h"
 #include "radiosity.h"
@@ -28,6 +29,9 @@ PhotonMapping* GLCanvas::photon_mapping = NULL;
 
 BoundingBox GLCanvas::bbox;
 GLFWwindow* GLCanvas::window = NULL;
+
+// output image file
+std::ofstream out_image;
 
 // mouse position
 int GLCanvas::mouseX = 0;
@@ -128,6 +132,12 @@ void GLCanvas::initialize(ArgParser *_args) {
   camera->glPlaceCamera();
 
   HandleGLError("finished glcanvas initialize");
+
+  //initialize output file
+  out_image.open(args->out_file, std::ofstream::out | std::ofstream::binary);
+  out_image << "P6\n";
+  out_image << args->width << " " << args->height << "\n";
+  out_image << "255\n";
 }
 
 
@@ -356,15 +366,10 @@ void GLCanvas::keyboardCB(GLFWwindow* window, int key, int scancode, int action,
           args->gather_indirect = true;
           printf ("photon mapping animation started, press 'G' to stop\n");
         }
-        if (args->width <= args->height) {
-          raytracing_divs_x = 10;
-          raytracing_divs_y = 10 * args->height / float (args->width);
-        } else {
-          raytracing_divs_x = 10 * args->width / float (args->height);
-          raytracing_divs_y = 10;
-        }
+        raytracing_divs_x = args->width;
+        raytracing_divs_y = args->height;
         raytracing_x = 0;
-        raytracing_y = 0;
+        raytracing_y = args->height;
         raytracer->resetVBOs();
       } else
         printf ("raytracing animation stopped, press 'R' to start\n");
@@ -555,25 +560,20 @@ int GLCanvas::DrawPixel() {
   if (raytracing_x >= raytracing_divs_x) {
     // end of row
     raytracing_x = 0;
-    raytracing_y += 1;
+    raytracing_y -= 1;
   }
-  if (raytracing_y >= raytracing_divs_y) {
+  if (raytracing_y < 0) {
     // last row
-    if (raytracing_divs_x >= args->width ||
-        raytracing_divs_y >= args->height) {
+    if (raytracing_x >= args->width  ||
+        raytracing_x < 0             ||
+        raytracing_y >= args->height ||
+        raytracing_y < 0) {
       // stop rendering, matches resolution of current camera
+      printf("finished ray tracing\n");
       return 0;
     }
-    // else decrease pixel size & start over again in the bottom left corner
-    raytracing_divs_x *= 3;
-    raytracing_divs_y *= 3;
-    if (raytracing_divs_x > args->width * 0.51 ||
-        raytracing_divs_x > args->height * 0.51) {
-      raytracing_divs_x = args->width;
-      raytracing_divs_y = args->height;
-    }
     raytracing_x = 0;
-    raytracing_y = 0;
+    raytracing_y = args->height;
     if (raytracer->render_to_a) {
       raytracer->pixels_b.clear();
       raytracer->pixels_indices_b.clear();
@@ -599,6 +599,12 @@ int GLCanvas::DrawPixel() {
   double r = linear_to_srgb(color.r);
   double g = linear_to_srgb(color.g);
   double b = linear_to_srgb(color.b);
+  if (args->out_file != "") {
+    unsigned int r_255 = (r * 255); if (r_255 > 255) r_255 = 255;
+    unsigned int g_255 = (g * 255); if (g_255 > 255) g_255 = 255;
+    unsigned int b_255 = (b * 255); if (b_255 > 255) b_255 = 255;
+    out_image << (unsigned char)r_255 << (unsigned char)g_255 << (unsigned char)b_255;
+  }
   if (raytracer->render_to_a) {
     int start = raytracer->pixels_a.size();
     raytracer->pixels_a.push_back(VBOPosNormalColor(pos1,glm::vec3(0,0,0),glm::vec4(r,g,b,1.0)));
