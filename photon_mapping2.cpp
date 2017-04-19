@@ -42,7 +42,7 @@ void PhotonMapping::TracePhoton(const glm::vec3 &position, const glm::vec3 &dire
   // tracing.
   Ray ray(position+(0.0001*direction), direction);
   Hit hit;
-  bool h = raytracer->CastRay(ray, hit, true);
+  bool h = raytracer->CastRay(ray, hit, false);
   if (h == false) return;
   glm::vec3 pos = hit.getT()*direction + position;
   if (iter != 0) {

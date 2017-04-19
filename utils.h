@@ -38,6 +38,20 @@
 
 #define SRGB_ALPHA 0.055
 
+
+inline glm::vec3 operator*(double d, glm::vec3 v) {
+  return glm::vec3(d*v.x, d*v.y, d*v.z);
+}
+
+inline glm::vec3 operator*(glm::vec3 v, double d) {
+  return d*v;
+}
+
+inline glm::vec3 operator/(glm::vec3 v, double d) {
+  return glm::vec3(v.x / d, v.y / d, v.z / d);
+}
+
+
 inline float linear_to_srgb(float x) {
   float answer;
   if (x <= 0.0031308)

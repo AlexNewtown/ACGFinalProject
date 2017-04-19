@@ -27,10 +27,9 @@ PhotonMapping::~PhotonMapping() {
 
 void PhotonMapping::TracePhoton(const glm::vec3 &position, const glm::vec3 &direction,
 				const glm::vec3 &energy, int iter) {
-    // if (iter > args->num_bounces)
-    //   return;
-    Hit hit = Hit();
-    bool intersect = raytracer->CastRay(Ray(position,direction),hit,false);
+
+    Hit hit;
+    bool intersect = raytracer->CastRay(Ray(position+(0.0001*direction),direction),hit,false);
     if (!intersect)
       return;
 
@@ -40,17 +39,17 @@ void PhotonMapping::TracePhoton(const glm::vec3 &position, const glm::vec3 &dire
     normal = hit.getNormal();
     newPosition = hit.getT()*direction+position;
 
-    //Random absorbtion
-    double event = args->rand();
-    // if (event<.4)
-    //   return;
+    //Store in kdtree
+    kdtree->AddPhoton(Photon(newPosition,direction,energy,iter));
+
+    //Shadow Photons
+    if (iter == 0)
+      TracePhoton(newPosition+(0.0001*direction), direction, glm::vec3(0.0,0.0,0.0), iter);
 
     //Reflective
     newEnergy = energy*mat->getReflectiveColor();
     newDirection = MirrorDirection(normal,direction);
     if (glm::length(newEnergy) > EPSILON/100) {
-      if (iter > 0)
-        kdtree->AddPhoton(Photon(newPosition,newDirection,newEnergy,iter+1));
       TracePhoton(newPosition,newDirection,newEnergy,iter+1);
     }
 
@@ -58,8 +57,6 @@ void PhotonMapping::TracePhoton(const glm::vec3 &position, const glm::vec3 &dire
     newEnergy = energy*mat->getDiffuseColor();
     newDirection = RandomDiffuseDirection(normal);
     if (glm::length(newEnergy) > EPSILON/100) {
-      if (iter > 0)
-        kdtree->AddPhoton(Photon(newPosition,newDirection,newEnergy,iter+1));
       TracePhoton(newPosition,newDirection,newEnergy,iter+1);
     }
 
@@ -105,7 +102,7 @@ void PhotonMapping::TracePhotons() {
       glm::vec3 start = lights[i]->RandomPoint();
       // the initial direction for this photon (for diffuse light sources)
       glm::vec3 direction = RandomDiffuseDirection(normal);
-      TracePhoton(start,direction,energy,0);
+      TracePhoton(start+(0.0001*direction),direction,energy,0);
     }
   }
 }
@@ -205,6 +202,7 @@ void PhotonMapping::setupVBOs() {
 	const Photon &p = photons[i];
 	glm::vec3 energy = p.getEnergy()*float(args->num_photons_to_shoot);
         glm::vec4 color(energy.x,energy.y,energy.z,1);
+        if (glm::length(energy) == 0.0) color = glm::vec4(0.0,0.0,1.0,1.0);//render shadow photons blue
 	const glm::vec3 &position = p.getPosition();
 	glm::vec3 other = position - p.getDirectionFrom()*0.02f*max_dim;
         addEdgeGeometry(photon_direction_verts,photon_direction_indices,
