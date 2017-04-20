@@ -83,6 +83,27 @@ void KDTree::AddPhoton(const Photon &p) {
   }
 }
 
+int KDTree::CountPhotonsInBox(const BoundingBox &bb) const {
+  std::vector<const KDTree*> todo;
+  todo.push_back(this);
+  int size = 0;
+  while (!todo.empty()) {
+    const KDTree *node = todo.back();
+    todo.pop_back();
+    if (!node->overlaps(bb)) continue;
+    if (node->isLeaf()) {
+      // if this cell overlaps & is a leaf, add all of the photons into the master list
+      // NOTE: these photons may not be inside of the query bounding box
+      const std::vector<Photon> &photons2 = node->getPhotons();
+      size += photons2.size();
+    } else {
+      // if this cell is not a leaf, explore both children
+      todo.push_back(node->getChild1());
+      todo.push_back(node->getChild2());
+    }
+  }
+  return size;
+}
 
 // ==================================================================
 void KDTree::CollectPhotonsInBox(const BoundingBox &bb, std::vector<Photon> &photons) const {
@@ -110,6 +131,36 @@ void KDTree::CollectPhotonsInBox(const BoundingBox &bb, std::vector<Photon> &pho
   }
 }
 
+void KDTree::UpdatePhoton(const Photon& p) {
+  const glm::vec3 &position = p.getPosition();
+  assert (PhotonInCell(p));
+  if (isLeaf()) {
+    for (int i=0;i<photons.size();i++) {
+      if (photons[i].getPosition() == p.getPosition())
+        photons[i] = p;
+    }
+  } else {
+    // this cell is not a leaf node
+    // decide which subnode to recurse into
+    if (split_axis == 0) {
+      if (position.x < split_value)
+       child1->UpdatePhoton(p);
+      else
+       child2->UpdatePhoton(p);
+    } else if (split_axis == 1) {
+      if (position.y < split_value)
+       child1->UpdatePhoton(p);
+      else
+       child2->UpdatePhoton(p);
+    } else {
+      assert (split_axis == 2);
+      if (position.z < split_value)
+       child1->UpdatePhoton(p);
+      else
+       child2->UpdatePhoton(p);
+    }
+  }
+}
 
 // ==================================================================
 void KDTree::SplitCell() {
