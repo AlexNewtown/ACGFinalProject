@@ -115,9 +115,51 @@ bool closest_photon(const std::pair<Photon,float> &a, const std::pair<Photon,flo
   return (a.second < b.second);
 }
 
+void PhotonMapping::GatherPhotons(const glm::vec3 &point, const glm::vec3 &normal, const glm::vec3 &direction_from, std::vector<Photon> &photons, double &radius) const {
+
+  if (kdtree == NULL) {
+    std::cout << "WARNING: Photons have not been traced throughout the scene." << std::endl;
+    return;
+  }
+
+  do {
+    radius *= 1.5;
+    photons.clear();
+    glm::vec3 min = glm::vec3(point.x - radius, point.y - radius, point.z - radius);
+    glm::vec3 max = glm::vec3(point.x + radius, point.y + radius, point.z + radius);
+    BoundingBox bb(min, max);
+    std::vector<Photon> bb_photons;
+    kdtree->CollectPhotonsInBox(bb, bb_photons);
+    for (unsigned int i = 0; i < bb_photons.size(); ++i) {
+      if (fabs(glm::distance(point, bb_photons[i].getPosition()) < radius)) {
+        photons.push_back(bb_photons[i]);
+      }
+    }
+  } while (photons.size() < (unsigned)args->num_photons_to_collect);
+  //} while (false);
+
+}
+
+bool PhotonMapping::ShadowCounts(const std::vector<Photon> &photons, unsigned int &count_direct, unsigned int &count_shadow) const {
+  
+  count_direct = 0;
+  count_shadow = 0;
+  for (unsigned int i = 0; i < photons.size(); ++i) {
+    if (photons[i].whichBounce() == 0) {
+      if (glm::length(photons[i].getEnergy()) == 0.0) {
+        //Shadow photon
+        count_shadow++;
+      }
+      else {
+        //Direct photon
+        count_direct++;
+      }
+    }
+  }
+}
 
 // ======================================================================
-glm::vec3 PhotonMapping::GatherIndirect(const glm::vec3 &point, const glm::vec3 &normal, const glm::vec3 &direction_from) const {
+glm::vec3 PhotonMapping::GatherIndirect(const glm::vec3 &point, const glm::vec3 &normal, const glm::vec3 &direction_from, const std::vector<Photon> &photons, double radius) const {
 
 
   if (kdtree == NULL) {
@@ -129,38 +171,15 @@ glm::vec3 PhotonMapping::GatherIndirect(const glm::vec3 &point, const glm::vec3 
   // photons with energy >  0 and bounce == 0 are illumination photons
 
   BoundingBox query = BoundingBox(point);
-  std::vector<Photon> queriedPhotons;
   glm::vec3 answer = glm::vec3(0);
-  float radius = 0;
-  radius = .1;
-  query.Extend(glm::vec3(.1));
-  while (queriedPhotons.size() < args->num_photons_to_collect) {
-    queriedPhotons.clear();
-    radius *= 2;
-    query.Extend(glm::vec3(radius));
-
-    std::vector<Photon> tmp;
-    kdtree->CollectPhotonsInBox(query,tmp);
-    if (tmp.size() < args->num_photons_to_collect)
-      continue;
-  //  std::sort(tmp.begin(),tmp.end(),closest_photon);
-    for (int i=0;i<tmp.size();i++) {
-      if (glm::length(tmp[i].getPosition()-point) < radius)
-        queriedPhotons.push_back(tmp[i]);
-      if (queriedPhotons.size() == args->num_photons_to_collect) {
-        break;
-      }
-    }
-
+  
+  for (int i=0;i<photons.size();i++) {
+    if (photons[i].whichBounce() != 0)
+      answer += photons[i].getEnergy();
   }
-  //std::cout<<"HI"<<std::endl;
-  for (int i=0;i<queriedPhotons.size();i++)
-    answer += queriedPhotons[i].getEnergy();
 
   answer /= float(M_PI*square(radius));
-  //std::cout<<glm::to_string(answer)<<std::endl;
-  return float(100)*answer;
-
+  return answer;
 
 }
 

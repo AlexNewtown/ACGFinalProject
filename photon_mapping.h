@@ -42,9 +42,11 @@ class PhotonMapping {
   // step 1: send the photons throughout the scene
   void TracePhotons();
   // step 2: collect the photons and return the contribution from indirect illumination
-  glm::vec3 GatherIndirect(const glm::vec3 &point, const glm::vec3 &normal, const glm::vec3 &direction_from) const;
+  glm::vec3 GatherIndirect(const glm::vec3 &point, const glm::vec3 &normal, const glm::vec3 &direction_from, const std::vector<Photon> &photons, double radius) const;
+  void GatherPhotons(const glm::vec3 &point, const glm::vec3 &normal, const glm::vec3 &direction_from, std::vector<Photon> &photons, double &radius) const;
+  bool ShadowCounts(const std::vector<Photon> &photons, unsigned int &count_direct, unsigned int &count_shadow) const;
 
- private:
+  private:
 
   // trace a single photon
   void TracePhoton(const glm::vec3 &position, const glm::vec3 &direction, const glm::vec3 &energy, int iter);
