@@ -125,6 +125,9 @@ glm::vec3 PhotonMapping::GatherIndirect(const glm::vec3 &point, const glm::vec3 
     return glm::vec3(0,0,0);
   }
 
+  // photons with energy == 0 and bounce == 0 are shadow photons
+  // photons with energy >  0 and bounce == 0 are illumination photons
+
   BoundingBox query = BoundingBox(point);
   std::vector<Photon> queriedPhotons;
   glm::vec3 answer = glm::vec3(0);
