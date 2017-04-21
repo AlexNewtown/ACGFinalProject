@@ -27,10 +27,9 @@ PhotonMapping::~PhotonMapping() {
 
 void PhotonMapping::TracePhoton(const glm::vec3 &position, const glm::vec3 &direction,
 				const glm::vec3 &energy, int iter) {
-    // if (iter > args->num_bounces)
-    //   return;
-    Hit hit = Hit();
-    bool intersect = raytracer->CastRay(Ray(position,direction),hit,false);
+
+    Hit hit;
+    bool intersect = raytracer->CastRay(Ray(position+(0.0001*direction),direction),hit,false);
     if (!intersect)
       return;
 
@@ -40,17 +39,17 @@ void PhotonMapping::TracePhoton(const glm::vec3 &position, const glm::vec3 &dire
     normal = hit.getNormal();
     newPosition = hit.getT()*direction+position;
 
-    //Random absorbtion
-    double event = args->rand();
-    if (event<.2)
-    //   return;
+    //Store in kdtree
+    kdtree->AddPhoton(Photon(newPosition,direction,energy,normal,iter));
+
+    //Shadow Photons
+    if (iter == 0)
+      TracePhoton(newPosition+(0.0001*direction), direction, glm::vec3(0.0,0.0,0.0), iter);
 
     //Reflective
     newEnergy = energy*mat->getReflectiveColor();
     newDirection = MirrorDirection(normal,direction);
     if (glm::length(newEnergy) > EPSILON/100) {
-      // if (iter > 0)
-      //   kdtree->AddPhoton(Photon(newPosition,newDirection,newEnergy,normal,iter+1));
       TracePhoton(newPosition,newDirection,newEnergy,iter+1);
     }
 
@@ -58,28 +57,6 @@ void PhotonMapping::TracePhoton(const glm::vec3 &position, const glm::vec3 &dire
     newEnergy = energy*mat->getDiffuseColor();
     newDirection = RandomDiffuseDirection(normal);
     if (glm::length(newEnergy) > EPSILON/100) {
-      BoundingBox query;
-      std::vector<Photon> tmp, close;
-      float dist = .4;
-      int num_close_photons = 10;
-      query.Set(newPosition-glm::vec3(dist),glm::vec3(dist)+newPosition);
-      kdtree->CollectPhotonsInBox(query,tmp);
-      for (int i=0;i<tmp.size();i++)
-        if (glm::length(newPosition-tmp[i].getPosition())<dist && glm::length(newEnergy-tmp[i].getEnergy())<EPSILON && glm::length(newEnergy-tmp[i].getEnergy())<EPSILON)
-          close.push_back(tmp[i]);
-      if (iter > 0 && close.size() < num_close_photons)
-        kdtree->AddPhoton(Photon(newPosition,direction,energy,normal,iter+1));
-      else if (iter > 0) {
-        for (int i=0;i<close.size();i++) {
-          if (glm::length(newPosition-close[i].getPosition()) > EPSILON) {
-            glm::vec3 interpolatedEnergy = close[i].getEnergy();
-            interpolatedEnergy += newEnergy/(num_close_photons*square(glm::length(newPosition-close[i].getPosition())));
-            close[i].setEnergy(interpolatedEnergy);
-            close[i].setPosition(close[i].getPosition() + newPosition/float(num_close_photons));
-            kdtree->UpdatePhoton(close[i]);
-          }
-        }
-      }
       TracePhoton(newPosition,newDirection,newEnergy,iter+1);
     }
 
@@ -125,7 +102,7 @@ void PhotonMapping::TracePhotons() {
       glm::vec3 start = lights[i]->RandomPoint();
       // the initial direction for this photon (for diffuse light sources)
       glm::vec3 direction = RandomDiffuseDirection(normal);
-      TracePhoton(start,direction,energy,0);
+      TracePhoton(start+(0.0001*direction),direction,energy,0);
     }
   }
 }
@@ -143,47 +120,49 @@ bool closest_photon(const std::pair<Photon,float> &a, const std::pair<Photon,flo
 glm::vec3 PhotonMapping::GatherIndirect(const glm::vec3 &point, const glm::vec3 &normal, const glm::vec3 &direction_from) const {
 
 
-  if (kdtree == NULL) {
-    std::cout << "WARNING: Photons have not been traced throughout the scene." << std::endl;
-    return glm::vec3(0,0,0);
-  }
 
 
-
-  // ================================================================
-  // ASSIGNMENT: GATHER THE INDIRECT ILLUMINATION FROM THE PHOTON MAP
-  // ================================================================
-
-  // collect the closest args->num_photons_to_collect photons
-  // determine the radius that was necessary to collect that many photons
-  // average the energy of those photons over that area
-  double radius = 0.1;
-  std::vector<Photon> culled_photons;
-  do {
-    radius *= 1.5;
-    culled_photons.clear();
-    glm::vec3 min = glm::vec3(point.x - radius, point.y - radius, point.z - radius);
-    glm::vec3 max = glm::vec3(point.x + radius, point.y + radius, point.z + radius);
-    BoundingBox bb(min, max);
-    std::vector<Photon> photons;
-    kdtree->CollectPhotonsInBox(bb, photons);
-    for (unsigned int i = 0; i < photons.size(); ++i) {
-      if (fabs(glm::distance(point, photons[i].getPosition()) < radius)) {
-        culled_photons.push_back(photons[i]);
-      }
+    if (kdtree == NULL) {
+      std::cout << "WARNING: Photons have not been traced throughout the scene." << std::endl;
+      return glm::vec3(0,0,0);
     }
-  //} while (culled_photons.size() < (unsigned)args->num_photons_to_collect);
-  } while (false);
-//  printf("radius %f  num_photons %lu target_photons %d\n", radius, culled_photons.size(), args->num_photons_to_collect);
 
-  glm::vec3 total_energy(0.0,0.0,0.0);
-  for (unsigned int i = 0; i < culled_photons.size(); ++i) {
-    total_energy += culled_photons[i].getEnergy();
-  }
-  total_energy /= M_PI*radius*radius;
 
-  // return the color
-  return total_energy;
+
+    // ================================================================
+    // ASSIGNMENT: GATHER THE INDIRECT ILLUMINATION FROM THE PHOTON MAP
+    // ================================================================
+
+    // collect the closest args->num_photons_to_collect photons
+    // determine the radius that was necessary to collect that many photons
+    // average the energy of those photons over that area
+    double radius = 0.1;
+    std::vector<Photon> culled_photons;
+    do {
+      radius *= 1.5;
+      culled_photons.clear();
+      glm::vec3 min = glm::vec3(point.x - radius, point.y - radius, point.z - radius);
+      glm::vec3 max = glm::vec3(point.x + radius, point.y + radius, point.z + radius);
+      BoundingBox bb(min, max);
+      std::vector<Photon> photons;
+      kdtree->CollectPhotonsInBox(bb, photons);
+      for (unsigned int i = 0; i < photons.size(); ++i) {
+        if (fabs(glm::distance(point, photons[i].getPosition()) < radius)) {
+          culled_photons.push_back(photons[i]);
+        }
+      }
+    //} while (culled_photons.size() < (unsigned)args->num_photons_to_collect);
+    } while (false);
+    printf("radius %f  num_photons %lu target_photons %d\n", radius, culled_photons.size(), args->num_photons_to_collect);
+
+    glm::vec3 total_energy(0.0,0.0,0.0);
+    for (unsigned int i = 0; i < culled_photons.size(); ++i) {
+      total_energy += culled_photons[i].getEnergy();
+    }
+    total_energy /= M_PI*radius*radius;
+
+    // return the color
+    return total_energy;
 
 
 }
@@ -229,6 +208,7 @@ void PhotonMapping::setupVBOs() {
 	const Photon &p = photons[i];
 	glm::vec3 energy = p.getEnergy()*float(args->num_photons_to_shoot);
         glm::vec4 color(energy.x,energy.y,energy.z,1);
+        if (glm::length(energy) == 0.0) color = glm::vec4(0.0,0.0,1.0,1.0);//render shadow photons blue
 	const glm::vec3 &position = p.getPosition();
 	glm::vec3 other = position - p.getDirectionFrom()*0.02f*max_dim;
         addEdgeGeometry(photon_direction_verts,photon_direction_indices,
