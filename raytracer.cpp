@@ -93,82 +93,96 @@ glm::vec3 RayTracer::TraceRay(Ray &ray, Hit &hit, int bounce_count) const {
   // ----------------------------------------------
   // add contributions from each light that is not in shadow
   int num_lights = mesh->getLights().size();
-  for (int i = 0; i < num_lights; i++) {
+  if (glm::length(m->getDiffuseColor(hit.get_s(),hit.get_t())) > 0.0) {
+    for (int i = 0; i < num_lights; i++) {
 
-    Face *f = mesh->getLights()[i];
-    glm::vec3 lightColor = f->getMaterial()->getEmittedColor() * f->getArea();
-    glm::vec3 myLightColor;
-    glm::vec3 lightCentroid = f->computeCentroid();
-    glm::vec3 dirToLightCentroid = glm::normalize(lightCentroid-point);
-    float distToLightCentroid = glm::length(lightCentroid-point);
+      Face *f = mesh->getLights()[i];
+      glm::vec3 lightColor = f->getMaterial()->getEmittedColor() * f->getArea();
+      glm::vec3 myLightColor;
+      glm::vec3 lightCentroid = f->computeCentroid();
+      glm::vec3 dirToLightCentroid = glm::normalize(lightCentroid-point);
+      float distToLightCentroid = glm::length(lightCentroid-point);
 
-    if (args->num_shadow_samples == 0 || directly_illuminated)
-      answer = m->Shade(ray,hit,dirToLightCentroid,lightColor/float(M_PI*distToLightCentroid*distToLightCentroid),args);
-    else if (completely_shadowed) {}
-    else if (args->num_shadow_samples == 1) {
-      Hit shadHit = Hit();
-      Ray toLight = Ray(point,dirToLightCentroid);
-      RayTree::AddShadowSegment(toLight,0,hit.getT());
-      CastRay(toLight,shadHit,false);
-      myLightColor = lightColor / float(M_PI*distToLightCentroid*distToLightCentroid);
-      if (shadHit.getMaterial() == f->getMaterial())
-        answer += m->Shade(ray,hit,dirToLightCentroid,myLightColor,args);
-    } else {
-      int gridSize = (int)sqrt(args->num_shadow_samples);
-      int gridSquare = square(gridSize);
-      for (int j=0;j<gridSize;j++) {
-        for (int k=0;k<gridSize;k++) {
-          glm::vec3 randPoint = f->RandomPoint(gridSize,j,k); // jitter in here
+      if (args->num_shadow_samples == 0 || directly_illuminated)
+        answer += m->Shade(ray,hit,dirToLightCentroid,lightColor/float(M_PI*distToLightCentroid*distToLightCentroid),args);
+      else if (completely_shadowed) {}
+      else if (args->num_shadow_samples == 1) {
+        Hit shadHit = Hit();
+        Ray toLight = Ray(point,dirToLightCentroid);
+        RayTree::AddShadowSegment(toLight,0,hit.getT());
+        CastRay(toLight,shadHit,false);
+        myLightColor = lightColor / float(M_PI*distToLightCentroid*distToLightCentroid);
+        if (shadHit.getMaterial() == f->getMaterial())
+          answer += m->Shade(ray,hit,dirToLightCentroid,myLightColor,args);
+      } else {
+        //answer += m->Shade(ray,hit,dirToLightCentroid,glm::vec3(0,0,1),args); // TESTING blue
+        int gridSize = (int)sqrt(args->num_shadow_samples);
+        int gridSquare = square(gridSize);
+        for (int j=0;j<gridSize;j++) {
+          for (int k=0;k<gridSize;k++) {
+            glm::vec3 randPoint = f->RandomPoint(gridSize,j,k); // jitter in here
+            glm::vec3 dirToRandPoint = glm::normalize(randPoint-point);
+            Hit shadHit;
+            Ray toLight = Ray(point,dirToRandPoint);
+            bool rayhit = CastRay(toLight,shadHit,false);
+            RayTree::AddShadowSegment(toLight,0,shadHit.getT());
+            float distToRandPoint = glm::length(randPoint-point);
+            myLightColor = lightColor / float(M_PI*pow(distToRandPoint,2));
+            myLightColor /= float(args->num_shadow_samples);
+            if (rayhit && shadHit.getMaterial() == f->getMaterial())
+              answer += m->Shade(ray,hit,dirToRandPoint,myLightColor,args);
+          }
+        }
+        // remainder after square jittering
+        for (int j=0;j<args->num_shadow_samples-gridSquare;j++) {
+          glm::vec3 randPoint = f->RandomPoint();
           glm::vec3 dirToRandPoint = glm::normalize(randPoint-point);
-          Hit shadHit = Hit();
+          Hit shadHit;
           Ray toLight = Ray(point,dirToRandPoint);
-          CastRay(toLight,shadHit,false);
+          bool rayhit = CastRay(toLight,shadHit,false);
           RayTree::AddShadowSegment(toLight,0,shadHit.getT());
           float distToRandPoint = glm::length(randPoint-point);
           myLightColor = lightColor / float(M_PI*pow(distToRandPoint,2));
-
-          if (glm::length(shadHit.getT()*dirToRandPoint - randPoint+point) < .00001)
-            answer += m->Shade(ray,hit,dirToRandPoint,myLightColor,args)/float(args->num_shadow_samples);
+          myLightColor /= float(args->num_shadow_samples);
+          if (rayhit && shadHit.getMaterial() == f->getMaterial())
+            answer += m->Shade(ray,hit,dirToRandPoint,myLightColor,args);
         }
-      }
-      for (int j=0;j<args->num_shadow_samples-gridSquare;j++) {
-        glm::vec3 randPoint = f->RandomPoint();
-        glm::vec3 dirToRandPoint = glm::normalize(randPoint-point);
-        Hit shadHit = Hit();
-        Ray toLight = Ray(point,dirToRandPoint);
-        RayTree::AddShadowSegment(toLight,0,hit.getT());
-        CastRay(toLight,shadHit,false);
-        float distToRandPoint = glm::length(randPoint-point);
-        myLightColor = lightColor / float(M_PI*pow(distToRandPoint,2));
-
-        if (glm::length(shadHit.getT()*dirToRandPoint - randPoint+point) < .00001)
-          answer += m->Shade(ray,hit,dirToRandPoint,myLightColor,args)/float(args->num_shadow_samples);
       }
     }
   }
 
   // ----------------------------------------------
   // add contribution from reflection, if the surface is shiny
-  if (bounce_count > 0) {
-    glm::vec3 reflectiveColor = m->getReflectiveColor();
-    glm::vec3 reflectDir = MirrorDirection(normal,ray.getDirection());
-    if (args->num_glossy_samples == 1) {
-      Ray reflectRay = Ray(point,reflectDir);
-      answer += reflectiveColor*TraceRay(reflectRay,hit,bounce_count-1);
-      RayTree::AddReflectedSegment(reflectRay,0,hit.getT());
-    } else {
-      float max_angle,current_angle;
-      max_angle = .5;
-      current_angle = -max_angle/2.0;
-      for (int k=0;k<args->num_glossy_samples;k++) {
-        glm::vec3 glossyDir = float(1-m->getRoughness())*reflectDir + float(m->getRoughness())*RandomDiffuseDirection(normal);
-        current_angle += max_angle/args->num_glossy_samples;
-        Ray glossyRay = Ray(point,glossyDir);
-        answer += reflectiveColor*TraceRay(glossyRay,hit,bounce_count-1)/float(args->num_glossy_samples);
-        RayTree::AddReflectedSegment(glossyRay,0,hit.getT());
-      }
+  glm::vec3 reflectiveColor = m->getReflectiveColor();//percentage from reflected light
+  if (bounce_count > 0 && glm::length(reflectiveColor) > EPSILON) {
+    glm::vec3 V = ray.getDirection();
+    glm::vec3 R = glm::normalize(V - (2*glm::dot(V,normal)*normal));
+    double roughness = m->getRoughness();
+
+    glm::vec3 glossy_color(0.0,0.0,0.0);
+    if (args->num_glossy_samples < 2 || roughness == 0.0) { // mirror reflectance
+      Ray reflected(point+(0.0001*normal), R);
+      Hit reflected_hit;
+      glossy_color = TraceRay(reflected, reflected_hit, bounce_count-1);
+      RayTree::AddReflectedSegment(reflected, 0.0, reflected_hit.getT());
     }
+    else { // glossy reflectance
+      for (int i = 0; i < args->num_glossy_samples; ++i) {
+        double rx = R[0]+(args->rand()-0.5)*roughness;
+        double ry = R[1]+(args->rand()-0.5)*roughness;
+        double rz = R[2]+(args->rand()-0.5)*roughness;
+        glm::vec3 d = glm::normalize(glm::vec3(rx,ry,rz));
+        Ray glossy_ray(point+(0.0001*normal),d);
+        Hit glossy_hit;
+        glossy_color += TraceRay(glossy_ray, glossy_hit, bounce_count-1);
+        RayTree::AddReflectedSegment(glossy_ray, 0.0, glossy_hit.getT());
+      }
+      glossy_color /= args->num_glossy_samples;
+    }
+    
+    answer += reflectiveColor*glossy_color;
   }
+
 
   return answer;
 
