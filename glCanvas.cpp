@@ -7,6 +7,7 @@
 #include <thread>
 #include <atomic>
 #include <fstream>
+#include <ctime>
 
 #include "mesh.h"
 #include "radiosity.h"
@@ -32,6 +33,9 @@ GLFWwindow* GLCanvas::window = NULL;
 
 // output image file
 std::ofstream out_image;
+
+//timer for benchmarking
+time_t start_time;
 
 // mouse position
 int GLCanvas::mouseX = 0;
@@ -371,6 +375,7 @@ void GLCanvas::keyboardCB(GLFWwindow* window, int key, int scancode, int action,
         raytracing_x = 0;
         raytracing_y = args->height;
         raytracer->resetVBOs();
+        start_time = time(NULL);
       } else
         printf ("raytracing animation stopped, press 'R' to start\n");
       break;
@@ -569,7 +574,9 @@ int GLCanvas::DrawPixel() {
         raytracing_y >= args->height ||
         raytracing_y < 0) {
       // stop rendering, matches resolution of current camera
-      printf("finished ray tracing\n");
+      time_t end_time = time(NULL);
+      double seconds = difftime(end_time, start_time);
+      printf("finished ray tracing in %.f seconds\n", seconds);
       return 0;
     }
     raytracing_x = 0;
