@@ -40,7 +40,7 @@ void PhotonMapping::TracePhoton(const glm::vec3 &position, const glm::vec3 &dire
     newPosition = hit.getT()*direction+position;
 
     //Store in kdtree
-    kdtree->AddPhoton(Photon(newPosition,direction,energy,iter));
+    kdtree->AddPhoton(Photon(newPosition,direction,energy,normal,iter));
 
     //Shadow Photons
     if (iter == 0)
@@ -161,12 +161,6 @@ bool PhotonMapping::ShadowCounts(const std::vector<Photon> &photons, unsigned in
 // ======================================================================
 glm::vec3 PhotonMapping::GatherIndirect(const glm::vec3 &point, const glm::vec3 &normal, const glm::vec3 &direction_from, const std::vector<Photon> &photons, double radius) const {
 
-
-  if (kdtree == NULL) {
-    std::cout << "WARNING: Photons have not been traced throughout the scene." << std::endl;
-    return glm::vec3(0,0,0);
-  }
-
   // photons with energy == 0 and bounce == 0 are shadow photons
   // photons with energy >  0 and bounce == 0 are illumination photons
 
@@ -180,7 +174,6 @@ glm::vec3 PhotonMapping::GatherIndirect(const glm::vec3 &point, const glm::vec3 
 
   answer /= float(M_PI*square(radius));
   return answer;
-
 }
 
 

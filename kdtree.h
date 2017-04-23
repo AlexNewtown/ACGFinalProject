@@ -41,7 +41,9 @@ class KDTree {
   const KDTree* getChild2() const { assert (!isLeaf()); assert (child2 != NULL); return child2; }
   // photons
   const std::vector<Photon>& getPhotons() const { return photons; }
+  int CountPhotonsInBox(const BoundingBox &bb) const;
   void CollectPhotonsInBox(const BoundingBox &bb, std::vector<Photon> &photons) const;
+  void UpdatePhoton(const Photon& p);
 
   // =========
   // MODIFIERS
