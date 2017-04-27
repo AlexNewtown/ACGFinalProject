@@ -24,6 +24,7 @@ public:
   RayTracer(Mesh *m, ArgParser *a) {
     mesh = m;
     args = a;
+    shadow_rays = 0;
   }  
   // set access to the other modules for hybrid rendering options
   void setRadiosity(Radiosity *r) { radiosity = r; }
@@ -39,7 +40,7 @@ public:
   bool CastRay(const Ray &ray, Hit &h, bool use_sphere_patches) const;
 
   // does the recursive work
-  glm::vec3 TraceRay(Ray &ray, Hit &hit, int bounce_count = 0) const;
+  glm::vec3 TraceRay(Ray &ray, Hit &hit, int bounce_count = 0);
 
 private:
 
@@ -62,6 +63,9 @@ public:
   std::vector<VBOPosNormalColor> pixels_b;
   std::vector<VBOIndexedTri> pixels_indices_a;
   std::vector<VBOIndexedTri> pixels_indices_b;
+
+  //benchmarking
+  unsigned int shadow_rays;
 
 
 private:

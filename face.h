@@ -24,6 +24,9 @@ public:
 
   // =========
   // ACCESSORS
+  bool isTri() const {
+    return (*this)[0] == (*this)[3];
+  }
   Vertex* operator[](int i) const {
     assert (edge != NULL);
     if (i==0) return edge->getStartVertex();
@@ -38,6 +41,10 @@ public:
     return edge;
   }
   glm::vec3 computeCentroid() const {
+    if ((*this)[0] == (*this)[3])
+      return 0.25f * ((*this)[0]->get() +
+                    (*this)[1]->get() +
+                    (*this)[2]->get());
     return 0.25f * ((*this)[0]->get() +
                     (*this)[1]->get() +
                     (*this)[2]->get() +

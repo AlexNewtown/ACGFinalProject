@@ -9,6 +9,11 @@ float Face::getArea() const {
   glm::vec3 b = (*this)[1]->get();
   glm::vec3 c = (*this)[2]->get();
   glm::vec3 d = (*this)[3]->get();
+  if (d == a) {
+    return AreaOfTriangle(DistanceBetweenTwoPoints(a,b),
+                   DistanceBetweenTwoPoints(a,c),
+                   DistanceBetweenTwoPoints(b,c));
+  }
   return
     AreaOfTriangle(DistanceBetweenTwoPoints(a,b),
                    DistanceBetweenTwoPoints(a,c),
@@ -106,6 +111,7 @@ bool Face::intersect(const Ray &r, Hit &h, bool intersect_backfacing) const {
   Vertex *b = (*this)[1];
   Vertex *c = (*this)[2];
   Vertex *d = (*this)[3];
+  if (d == a) return triangle_intersect(r,h,a,b,c,intersect_backfacing);
   return triangle_intersect(r,h,a,b,c,intersect_backfacing) || triangle_intersect(r,h,a,c,d,intersect_backfacing);
 }
 

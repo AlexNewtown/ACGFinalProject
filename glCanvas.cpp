@@ -36,6 +36,8 @@ std::ofstream out_image;
 
 //timer for benchmarking
 time_t start_time;
+//count for benchmarking
+unsigned int shadow_rays = 0;
 
 // mouse position
 int GLCanvas::mouseX = 0;
@@ -180,7 +182,7 @@ void GLCanvas::animate(){
 
   if (args->raytracing_animation) {
     // draw 100 pixels and then refresh the screen and handle any user input
-    for (int i = 0; i < 2000; i++) {
+    for (int i = 0; i < 5000; i++) {
       if (!DrawPixel()) {
         args->raytracing_animation = false;
         break;
@@ -189,7 +191,7 @@ void GLCanvas::animate(){
     raytracer->setupVBOs();
   }
 
-  usleep (1000);
+  usleep (50);
 }
 
 
@@ -376,6 +378,7 @@ void GLCanvas::keyboardCB(GLFWwindow* window, int key, int scancode, int action,
         raytracing_y = args->height;
         raytracer->resetVBOs();
         start_time = time(NULL);
+        raytracer->shadow_rays = 0;
       } else
         printf ("raytracing animation stopped, press 'R' to start\n");
       break;
@@ -577,6 +580,7 @@ int GLCanvas::DrawPixel() {
       time_t end_time = time(NULL);
       double seconds = difftime(end_time, start_time);
       printf("finished ray tracing in %.f seconds\n", seconds);
+      printf("used %u shadow rays\n", raytracer->shadow_rays);
       return 0;
     }
     raytracing_x = 0;

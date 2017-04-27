@@ -67,6 +67,10 @@ public:
   Face* getOriginalQuad(int i) const {
     assert (i < numOriginalQuads());
     return original_quads[i]; }
+  int numOriginalTris() const { return original_tris.size(); }
+  Face* getOriginalTri(int i) const {
+    assert (i < numOriginalTris());
+    return original_tris[i]; }
 
   // =======================================
   // ACCESS THE PRIMITIVES (for ray tracing)
@@ -82,12 +86,15 @@ public:
 
   // ==============================================================
   // ACCESS THE SUBDIVIDED QUADS + RASTERIZED FACES (for radiosity)
-  int numFaces() const { return subdivided_quads.size() + rasterized_primitive_faces.size(); }
+  int numFaces() const { return subdivided_quads.size() + rasterized_primitive_faces.size()+original_tris.size(); }
   Face* getFace(int i) const {
     int num_faces = numFaces();
     assert (i >= 0 && i < num_faces);
     if (i < (int)subdivided_quads.size()) return subdivided_quads[i];
-    else return getRasterizedPrimitiveFace(i-subdivided_quads.size()); }
+    else if (i < (int)rasterized_primitive_faces.size()+(int)subdivided_quads.size())
+      return getRasterizedPrimitiveFace(i-subdivided_quads.size());
+    else return original_tris[i-subdivided_quads.size()-rasterized_primitive_faces.size()];
+  }
 
   // ============================
   // CREATE OR SUBDIVIDE GEOMETRY
@@ -95,6 +102,8 @@ public:
     addFace(a,b,c,d,material,FACE_TYPE_RASTERIZED); }
   void addOriginalQuad(Vertex *a, Vertex *b, Vertex *c, Vertex *d, Material *material) {
     addFace(a,b,c,d,material,FACE_TYPE_ORIGINAL); }
+  void addOriginalTriangle(Vertex* a, Vertex *b, Vertex *c, Material *m) {
+    addFace(a,b,c,m,FACE_TYPE_ORIGINAL); }
   void addSubdividedQuad(Vertex *a, Vertex *b, Vertex *c, Vertex *d, Material *material) {
     addFace(a,b,c,d,material,FACE_TYPE_SUBDIVIDED); }
 
@@ -113,6 +122,7 @@ private:
   Vertex* AddEdgeVertex(Vertex *a, Vertex *b);
   Vertex* AddMidVertex(Vertex *a, Vertex *b, Vertex *c, Vertex *d);
   void addFace(Vertex *a, Vertex *b, Vertex *c, Vertex *d, Material *material, enum FACE_TYPE face_type);
+  void addFace(Vertex *a, Vertex *b, Vertex *c, Material *material, enum FACE_TYPE face_type);
   void removeFaceEdges(Face *f);
   void addPrimitive(Primitive *p); 
 
@@ -135,6 +145,7 @@ private:
 
   // the quads from the .obj file (before subdivision)
   std::vector<Face*> original_quads;
+  std::vector<Face*> original_tris;
   // the quads from the .obj file that have non-zero emission value
   std::vector<Face*> original_lights; 
   // all primitives (spheres, etc.)

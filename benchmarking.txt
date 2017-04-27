@@ -1,0 +1,27 @@
+
+reflective ring
+100,000 photons
+50 collect
+9 shadow
+9 antialias
+shadow_photons
+834s
+
+no shadow_photons
+904s
+
+reflective ring
+100,000 photons
+50 collect
+4 shadow
+1 antialias
+shadow_photons
+93s
+460,392 shadow rays
+
+no_shadow_photons
+88s
+1,195,516 shadow rays
+----
+100s
+1,195,516 shadow rays

@@ -12,7 +12,6 @@
 
 #include <glm/gtx/rotate_vector.hpp>
 
-
 // ===========================================================================
 // casts a single ray through the scene geometry and finds the closest hit
 bool RayTracer::CastRay(const Ray &ray, Hit &h, bool use_rasterized_patches) const {
@@ -22,6 +21,10 @@ bool RayTracer::CastRay(const Ray &ray, Hit &h, bool use_rasterized_patches) con
   for (int i = 0; i < mesh->numOriginalQuads(); i++) {
     Face *f = mesh->getOriginalQuad(i);
     if (f->intersect(ray,h,args->intersect_backfacing)) answer = true;
+  }
+  for (int i = 0; i < mesh->numOriginalTris(); i++) {
+      Face *f = mesh->getOriginalTri(i);
+      if (f->intersect(ray,h,args->intersect_backfacing)) answer = true;
   }
 
   // intersect each of the primitives (either the patches, or the original primitives)
@@ -41,7 +44,7 @@ bool RayTracer::CastRay(const Ray &ray, Hit &h, bool use_rasterized_patches) con
 
 // ===========================================================================
 // does the recursive (shadow rays & recursive rays) work
-glm::vec3 RayTracer::TraceRay(Ray &ray, Hit &hit, int bounce_count) const {
+glm::vec3 RayTracer::TraceRay(Ray &ray, Hit &hit, int bounce_count) {
 
   // First cast a ray and see if we hit anything.
   hit = Hit();
@@ -110,12 +113,13 @@ glm::vec3 RayTracer::TraceRay(Ray &ray, Hit &hit, int bounce_count) const {
         Hit shadHit = Hit();
         Ray toLight = Ray(point,dirToLightCentroid);
         RayTree::AddShadowSegment(toLight,0,hit.getT());
-        CastRay(toLight,shadHit,false);
+        bool rayhit = CastRay(toLight,shadHit,false);
+        shadow_rays++;
         myLightColor = lightColor / float(M_PI*distToLightCentroid*distToLightCentroid);
-        if (shadHit.getMaterial() == f->getMaterial())
+        if (rayhit && shadHit.getMaterial() == f->getMaterial())
           answer += m->Shade(ray,hit,dirToLightCentroid,myLightColor,args);
       } else {
-        //answer += m->Shade(ray,hit,dirToLightCentroid,glm::vec3(0,0,1),args); // TESTING blue
+        answer += m->Shade(ray,hit,dirToLightCentroid,glm::vec3(0,0,1),args); // TESTING blue
         int gridSize = (int)sqrt(args->num_shadow_samples);
         int gridSquare = square(gridSize);
         for (int j=0;j<gridSize;j++) {
@@ -125,6 +129,7 @@ glm::vec3 RayTracer::TraceRay(Ray &ray, Hit &hit, int bounce_count) const {
             Hit shadHit;
             Ray toLight = Ray(point,dirToRandPoint);
             bool rayhit = CastRay(toLight,shadHit,false);
+            shadow_rays++;
             RayTree::AddShadowSegment(toLight,0,shadHit.getT());
             float distToRandPoint = glm::length(randPoint-point);
             myLightColor = lightColor / float(M_PI*pow(distToRandPoint,2));
@@ -140,6 +145,7 @@ glm::vec3 RayTracer::TraceRay(Ray &ray, Hit &hit, int bounce_count) const {
           Hit shadHit;
           Ray toLight = Ray(point,dirToRandPoint);
           bool rayhit = CastRay(toLight,shadHit,false);
+          shadow_rays++;
           RayTree::AddShadowSegment(toLight,0,shadHit.getT());
           float distToRandPoint = glm::length(randPoint-point);
           myLightColor = lightColor / float(M_PI*pow(distToRandPoint,2));

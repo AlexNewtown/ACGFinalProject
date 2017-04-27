@@ -43,6 +43,11 @@ Mesh::~Mesh() {
     removeFaceEdges(f);
     delete f;
   }
+  for (i = 0; i < original_tris.size(); i++) {
+    Face *f = original_tris[i];
+    removeFaceEdges(f);
+    delete f;
+  }
   for (i = 0; i < primitives.size(); i++) { delete primitives[i]; }
   for (i = 0; i < materials.size(); i++) { delete materials[i]; }
   for (i = 0; i < vertices.size(); i++) { delete vertices[i]; }
@@ -120,27 +125,79 @@ void Mesh::addFace(Vertex *a, Vertex *b, Vertex *c, Vertex *d, Material *materia
   }
 }
 
+void Mesh::addFace(Vertex *a, Vertex *b, Vertex *c, Material *material, enum FACE_TYPE face_type) {
+  // create the face
+  Face *f = new Face(material);
+  // create the edges
+  Edge *ea = new Edge(a,b,f);
+  Edge *eb = new Edge(b,c,f);
+  Edge *ec = new Edge(c,a,f);
+// point the face to one of its edges
+  f->setEdge(ea);
+  // connect the edges to each other
+  ea->setNext(eb);
+  eb->setNext(ec);
+  ec->setNext(ea);
+  // verify these edges aren't already in the mesh 
+  // (which would be a bug, or a non-manifold mesh)
+  assert (edges.find(std::make_pair(a,b)) == edges.end());
+  assert (edges.find(std::make_pair(b,c)) == edges.end());
+  assert (edges.find(std::make_pair(c,a)) == edges.end());
+  // add the edges to the master list
+  edges[std::make_pair(a,b)] = ea;
+  edges[std::make_pair(b,c)] = eb;
+  edges[std::make_pair(c,a)] = ec;
+  // connect up with opposite edges (if they exist)
+  edgeshashtype::iterator ea_op = edges.find(std::make_pair(b,a)); 
+  edgeshashtype::iterator eb_op = edges.find(std::make_pair(c,b)); 
+  edgeshashtype::iterator ec_op = edges.find(std::make_pair(a,c)); 
+  if (ea_op != edges.end()) { ea_op->second->setOpposite(ea); }
+  if (eb_op != edges.end()) { eb_op->second->setOpposite(eb); }
+  if (ec_op != edges.end()) { ec_op->second->setOpposite(ec); }
+  // add the face to the appropriate master list
+  if (face_type == FACE_TYPE_ORIGINAL) {
+    //original_quads.push_back(f);
+    //subdivided_quads.push_back(f);
+    original_tris.push_back(f);
+  } else if (face_type == FACE_TYPE_RASTERIZED) {
+    rasterized_primitive_faces.push_back(f); 
+  } else {
+    assert (face_type == FACE_TYPE_SUBDIVIDED);
+    subdivided_quads.push_back(f);
+  }
+  // if it's a light, add it to that list too
+  if (glm::length(material->getEmittedColor()) > 0 && face_type == FACE_TYPE_ORIGINAL) {
+    original_lights.push_back(f);
+  }
+}
+
 void Mesh::removeFaceEdges(Face *f) {
   // helper function for face deletion
   Edge *ea = f->getEdge();
   Edge *eb = ea->getNext();
   Edge *ec = eb->getNext();
   Edge *ed = ec->getNext();
-  assert (ed->getNext() == ea);
   Vertex *a = ea->getStartVertex();
   Vertex *b = eb->getStartVertex();
   Vertex *c = ec->getStartVertex();
-  Vertex *d = ed->getStartVertex();
+  Vertex *d = NULL;
+  if (ed != ea)
+    d = ed->getStartVertex();
   // remove elements from master lists
   edges.erase(std::make_pair(a,b)); 
-  edges.erase(std::make_pair(b,c)); 
-  edges.erase(std::make_pair(c,d)); 
-  edges.erase(std::make_pair(d,a)); 
+  edges.erase(std::make_pair(b,c));
+  if (ed != ea) {
+    edges.erase(std::make_pair(c,d)); 
+    edges.erase(std::make_pair(d,a)); 
+  }
+  else
+    edges.erase(std::make_pair(c,a));
   // clean up memory
   delete ea;
   delete eb;
   delete ec;
-  delete ed;
+  if (ed != ea)
+    delete ed;
 }
 
 // ==============================================================================
@@ -207,6 +264,17 @@ void Mesh::Load(ArgParser *_args) {
       assert (d >= 0 && d < numVertices());
       assert (active_material != NULL);
       addOriginalQuad(getVertex(a),getVertex(b),getVertex(c),getVertex(d),active_material);
+    } else if (token == "f3") {
+      int a,b,c;
+      objfile >> a >> b >> c;
+      a--;
+      b--;
+      c--;
+      assert (a >= 0 && a < numVertices());
+      assert (b >= 0 && b < numVertices());
+      assert (c >= 0 && c < numVertices());
+      assert (active_material != NULL);
+      addOriginalTriangle(getVertex(a), getVertex(b), getVertex(c), active_material);
     } else if (token == "s") {
       float x,y,z,r;
       objfile >> x >> y >> z >> r;

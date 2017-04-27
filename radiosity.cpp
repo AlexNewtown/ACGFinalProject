@@ -264,27 +264,49 @@ void Radiosity::setupVBOs() {
     }
 
     // add the 4 corner vertices
-    for (int j = 0; j < 4; j++) {
-      glm::vec3 pos = ((*f)[j])->get();
-      double s = (*f)[j]->get_s();
-      double t = (*f)[j]->get_t();
-      glm::vec3 color = setupHelperForColor(f,i,j);
-      color = glm::vec3(linear_to_srgb(color.r),
-                        linear_to_srgb(color.g),
-                        linear_to_srgb(color.b));
-      avg_color += 0.25f * color;
-      mesh_tri_verts.push_back(VBOPosNormalColor(pos,normal,
-                                                 glm::vec4(color.r,color.g,color.b,1.0),
-                                                 wireframe_color,
-                                                 s,t));
-      avg_s += 0.25 * s;
-      avg_t += 0.25 * t;
-      e = e->getNext();
+    if (f->isTri()) {
+      for (int j = 0; j < 3; j++) {
+        glm::vec3 pos = ((*f)[j])->get();
+        double s = (*f)[j]->get_s();
+        double t = (*f)[j]->get_t();
+        glm::vec3 color = setupHelperForColor(f,i,j);
+        color = glm::vec3(linear_to_srgb(color.r),
+                          linear_to_srgb(color.g),
+                          linear_to_srgb(color.b));
+        avg_color += 0.25f * color;
+        mesh_tri_verts.push_back(VBOPosNormalColor(pos,normal,
+                                                   glm::vec4(color.r,color.g,color.b,1.0),
+                                                   wireframe_color,
+                                                   s,t));
+        avg_s += 0.25 * s;
+        avg_t += 0.25 * t;
+        e = e->getNext();
+      }
+    }
+    else {
+      for (int j = 0; j < 4; j++) {
+        glm::vec3 pos = ((*f)[j])->get();
+        double s = (*f)[j]->get_s();
+        double t = (*f)[j]->get_t();
+        glm::vec3 color = setupHelperForColor(f,i,j);
+        color = glm::vec3(linear_to_srgb(color.r),
+                          linear_to_srgb(color.g),
+                          linear_to_srgb(color.b));
+        avg_color += 0.25f * color;
+        mesh_tri_verts.push_back(VBOPosNormalColor(pos,normal,
+                                                   glm::vec4(color.r,color.g,color.b,1.0),
+                                                   wireframe_color,
+                                                   s,t));
+        avg_s += 0.25 * s;
+        avg_t += 0.25 * t;
+        e = e->getNext();
+      }
     }
 
     // the centroid (for wireframe rendering)
     glm::vec3 centroid = f->computeCentroid();
-    mesh_tri_verts.push_back(VBOPosNormalColor(centroid,normal,
+    if (!f->isTri())
+      mesh_tri_verts.push_back(VBOPosNormalColor(centroid,normal,
                                                glm::vec4(avg_color.r,avg_color.g,avg_color.b,1),
                                                glm::vec4(1,1,1,1),
                                                avg_s,avg_t));
@@ -295,14 +317,19 @@ void Radiosity::setupVBOs() {
       mesh_textured_tri_indices.push_back(VBOIndexedTri(start+2,start+3,start+4));
       mesh_textured_tri_indices.push_back(VBOIndexedTri(start+3,start+0,start+4));
     } else {
-      mesh_tri_indices.push_back(VBOIndexedTri(start+0,start+1,start+4));
-      mesh_tri_indices.push_back(VBOIndexedTri(start+1,start+2,start+4));
-      mesh_tri_indices.push_back(VBOIndexedTri(start+2,start+3,start+4));
-      mesh_tri_indices.push_back(VBOIndexedTri(start+3,start+0,start+4));
+      if (!f->isTri()) {
+        mesh_tri_indices.push_back(VBOIndexedTri(start+0,start+1,start+4));
+        mesh_tri_indices.push_back(VBOIndexedTri(start+1,start+2,start+4));
+        mesh_tri_indices.push_back(VBOIndexedTri(start+2,start+3,start+4));
+        mesh_tri_indices.push_back(VBOIndexedTri(start+3,start+0,start+4));
+      }
+      else {
+        mesh_tri_indices.push_back(VBOIndexedTri(start+0,start+1,start+2));
+      }
     }
   }
-  assert ((int)mesh_tri_verts.size() == num_faces*5);
-  assert ((int)mesh_tri_indices.size() + (int)mesh_textured_tri_indices.size() == num_faces*4);
+  //assert ((int)mesh_tri_verts.size() == num_faces*5);
+  //assert ((int)mesh_tri_indices.size() + (int)mesh_textured_tri_indices.size() == num_faces*4);
 
   // copy the data to each VBO
   glBindBuffer(GL_ARRAY_BUFFER,mesh_tri_verts_VBO);
@@ -346,7 +373,7 @@ void Radiosity::drawVBOs() {
   // =====================
   // DRAW ALL THE POLYGONS
 
-  assert ((int)mesh_tri_indices.size() + (int)mesh_textured_tri_indices.size() == num_faces*4);
+  //assert ((int)mesh_tri_indices.size() + (int)mesh_textured_tri_indices.size() == num_faces*4);
 
   // render with Phong lighting?
   if (args->render_mode == RENDER_MATERIALS) {
