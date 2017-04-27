@@ -141,7 +141,7 @@ void PhotonMapping::GatherPhotons(const glm::vec3 &point, const glm::vec3 &norma
 }
 
 bool PhotonMapping::ShadowCounts(const std::vector<Photon> &photons, unsigned int &count_direct, unsigned int &count_shadow) const {
-  
+
   count_direct = 0;
   count_shadow = 0;
   for (unsigned int i = 0; i < photons.size(); ++i) {
@@ -166,7 +166,7 @@ glm::vec3 PhotonMapping::GatherIndirect(const glm::vec3 &point, const glm::vec3 
 
   BoundingBox query = BoundingBox(point);
   glm::vec3 answer = glm::vec3(0);
-  
+
   for (int i=0;i<photons.size();i++) {
     if (photons[i].whichBounce() != 0)
       answer += photons[i].getEnergy();
