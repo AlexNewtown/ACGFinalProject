@@ -180,20 +180,16 @@ void GLCanvas::animate(){
 
   if (args->raytracing_animation) {
     // draw 100 pixels and then refresh the screen and handle any user input
-    std::vector<colorpos> colors[3];
+    int num_threads = 9;
+    std::vector<std::vector<colorpos> > colors(num_threads);
     std::vector<std::thread> threads;
-    for (int i=0;i<3;i++) {
+    for (int i=0;i<num_threads;i++) {
       threads.push_back(std::thread(subanimation,raytracing_x,raytracing_y,std::ref(colors[i])));
     //  subanimation(raytracing_x,raytracing_y,colors[i]);
-      raytracing_x += 500%raytracing_divs_x;
-      raytracing_y -= 500/raytracing_divs_x;
-      while (raytracing_x >= raytracing_divs_x) {
-        raytracing_x -= raytracing_divs_x;
-        raytracing_divs_y -= 1;
-      }
+      raytracing_y -= 1;
     }
 
-    for (int i=0;i<3;i++) {
+    for (int i=0;i<num_threads;i++) {
       threads[i].join();
       for (int j=0;j<colors[i].size();j++) {
         DrawPixel(colors[i][j].color,colors[i][j].x,colors[i][j].y);
@@ -204,18 +200,20 @@ void GLCanvas::animate(){
 }
 
 void GLCanvas::subanimation(int startx, int starty,std::vector<colorpos> &colors) {
+  int x = startx;
+  int y = starty;
   for (int j = 0; j < 500; j++) {
-    if (startx >= raytracing_divs_x) {
+    if (x >= raytracing_divs_x) {
       // end of row
-      startx = 0;
-      starty -= 1;
+      x = 0;
+      y -= 1;
     }
-    if (starty < 0) {
+    if (y < 0) {
       // last row
-      if (startx >= args->width  ||
-          startx < 0             ||
-          starty >= args->height ||
-          starty < 0) {
+      if (x >= args->width  ||
+          x < 0             ||
+          y >= args->height ||
+          y < 0) {
         // stop rendering, matches resolution of current camera
         time_t end_time = time(NULL);
         double seconds = difftime(end_time, start_time);
@@ -223,8 +221,8 @@ void GLCanvas::subanimation(int startx, int starty,std::vector<colorpos> &colors
         args->raytracing_animation = false;
         break;
       }
-      startx = 0;
-      starty = args->height;
+      x = 0;
+      y = args->height;
       if (raytracer->render_to_a) {
         raytracer->pixels_b.clear();
         raytracer->pixels_indices_b.clear();
@@ -235,9 +233,9 @@ void GLCanvas::subanimation(int startx, int starty,std::vector<colorpos> &colors
         raytracer->render_to_a = true;
       }
     }
-    glm::vec3 color = TraceRay((startx+0.5), (starty+0.5));
-    colors.push_back(colorpos(color,startx,starty));
-    startx += 1;
+    glm::vec3 color = TraceRay((x+0.5), (y+0.5));
+    colors.push_back(colorpos(color,x,y));
+    x += 1;
   }
 }
 
