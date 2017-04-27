@@ -50,9 +50,10 @@ class PhotonMapping {
 
   // trace a single photon
   void TracePhoton(const glm::vec3 &position, const glm::vec3 &direction, const glm::vec3 &energy, int iter);
+  bool checkCache();
 
   // REPRESENTATION
-  KDTree *kdtree;
+  KDTree *kdtree,*irradianceCache;
   Mesh *mesh;
   ArgParser *args;
   RayTracer *raytracer;

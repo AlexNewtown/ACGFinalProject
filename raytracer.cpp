@@ -179,7 +179,7 @@ glm::vec3 RayTracer::TraceRay(Ray &ray, Hit &hit, int bounce_count) const {
       }
       glossy_color /= args->num_glossy_samples;
     }
-    
+
     answer += reflectiveColor*glossy_color;
   }
 

@@ -180,16 +180,65 @@ void GLCanvas::animate(){
 
   if (args->raytracing_animation) {
     // draw 100 pixels and then refresh the screen and handle any user input
-    for (int i = 0; i < 2000; i++) {
-      if (!DrawPixel()) {
-        args->raytracing_animation = false;
-        break;
+    std::vector<colorpos> colors[3];
+    std::vector<std::thread> threads;
+    for (int i=0;i<3;i++) {
+      threads.push_back(std::thread(subanimation,raytracing_x,raytracing_y,std::ref(colors[i])));
+    //  subanimation(raytracing_x,raytracing_y,colors[i]);
+      raytracing_x += 500%raytracing_divs_x;
+      raytracing_y -= 500/raytracing_divs_x;
+      while (raytracing_x >= raytracing_divs_x) {
+        raytracing_x -= raytracing_divs_x;
+        raytracing_divs_y -= 1;
+      }
+    }
+
+    for (int i=0;i<3;i++) {
+      threads[i].join();
+      for (int j=0;j<colors[i].size();j++) {
+        DrawPixel(colors[i][j].color,colors[i][j].x,colors[i][j].y);
       }
     }
     raytracer->setupVBOs();
   }
+}
 
-  usleep (1000);
+void GLCanvas::subanimation(int startx, int starty,std::vector<colorpos> &colors) {
+  for (int j = 0; j < 500; j++) {
+    if (startx >= raytracing_divs_x) {
+      // end of row
+      startx = 0;
+      starty -= 1;
+    }
+    if (starty < 0) {
+      // last row
+      if (startx >= args->width  ||
+          startx < 0             ||
+          starty >= args->height ||
+          starty < 0) {
+        // stop rendering, matches resolution of current camera
+        time_t end_time = time(NULL);
+        double seconds = difftime(end_time, start_time);
+        printf("finished ray tracing in %.f seconds\n", seconds);
+        args->raytracing_animation = false;
+        break;
+      }
+      startx = 0;
+      starty = args->height;
+      if (raytracer->render_to_a) {
+        raytracer->pixels_b.clear();
+        raytracer->pixels_indices_b.clear();
+       raytracer->render_to_a = false;
+      } else {
+        raytracer->pixels_a.clear();
+        raytracer->pixels_indices_a.clear();
+        raytracer->render_to_a = true;
+      }
+    }
+    glm::vec3 color = TraceRay((startx+0.5), (starty+0.5));
+    colors.push_back(colorpos(color,startx,starty));
+    startx += 1;
+  }
 }
 
 
@@ -561,48 +610,16 @@ glm::vec3 GLCanvas::GetPos(double i, double j) {
 // and then up to the top right.  Initially the image is sampled very
 // coarsely.  Increment the static variables that track the progress
 // through the scans
-int GLCanvas::DrawPixel() {
-  if (raytracing_x >= raytracing_divs_x) {
-    // end of row
-    raytracing_x = 0;
-    raytracing_y -= 1;
-  }
-  if (raytracing_y < 0) {
-    // last row
-    if (raytracing_x >= args->width  ||
-        raytracing_x < 0             ||
-        raytracing_y >= args->height ||
-        raytracing_y < 0) {
-      // stop rendering, matches resolution of current camera
-      time_t end_time = time(NULL);
-      double seconds = difftime(end_time, start_time);
-      printf("finished ray tracing in %.f seconds\n", seconds);
-      return 0;
-    }
-    raytracing_x = 0;
-    raytracing_y = args->height;
-    if (raytracer->render_to_a) {
-      raytracer->pixels_b.clear();
-      raytracer->pixels_indices_b.clear();
-     raytracer->render_to_a = false;
-    } else {
-      raytracer->pixels_a.clear();
-      raytracer->pixels_indices_a.clear();
-      raytracer->render_to_a = true;
-    }
-  }
 
+void GLCanvas::DrawPixel(glm::vec3 color, int x, int y) {
   double x_spacing = args->width / double (raytracing_divs_x);
   double y_spacing = args->height / double (raytracing_divs_y);
 
   // compute the color and position of intersection
-  glm::vec3 pos1 =  GetPos((raytracing_x  )*x_spacing, (raytracing_y  )*y_spacing);
-  glm::vec3 pos2 =  GetPos((raytracing_x+1)*x_spacing, (raytracing_y  )*y_spacing);
-  glm::vec3 pos3 =  GetPos((raytracing_x+1)*x_spacing, (raytracing_y+1)*y_spacing);
-  glm::vec3 pos4 =  GetPos((raytracing_x  )*x_spacing, (raytracing_y+1)*y_spacing);
-
-  glm::vec3 color = TraceRay((raytracing_x+0.5)*x_spacing, (raytracing_y+0.5)*y_spacing);
-
+  glm::vec3 pos1 =  GetPos(x*x_spacing, y*y_spacing);
+  glm::vec3 pos2 =  GetPos((x+1)*x_spacing, y*y_spacing);
+  glm::vec3 pos3 =  GetPos((x+1)*x_spacing, (y+1)*y_spacing);
+  glm::vec3 pos4 =  GetPos(x*x_spacing, (y+1)*y_spacing);
   double r = linear_to_srgb(color.r);
   double g = linear_to_srgb(color.g);
   double b = linear_to_srgb(color.b);
@@ -629,11 +646,7 @@ int GLCanvas::DrawPixel() {
     raytracer->pixels_indices_b.push_back(VBOIndexedTri(start+0,start+1,start+2));
     raytracer->pixels_indices_b.push_back(VBOIndexedTri(start+0,start+2,start+3));
   }
-
-  raytracing_x += 1;
-  return 1;
 }
-
 
 // ========================================================
 // Load the vertex & fragment shaders

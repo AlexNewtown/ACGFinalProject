@@ -7,7 +7,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <thread>
-#include <future>
 
 #include <cstdio>
 #include <cstdlib>
@@ -26,6 +25,12 @@ class Camera;
 // ====================================================================
 // NOTE:  All the methods and variables of this class are static
 // ====================================================================
+
+typedef struct colorpos {
+  glm::vec3 color;
+  int x,y;
+  colorpos(glm::vec3 c,int _x,int _y) {this->color = c;this->x = _x; this->y = _y;}
+}colorpos;
 
 class GLCanvas {
 
@@ -85,8 +90,9 @@ public:
   static void cleanupVBOs();
 
   static void animate();
+  static void subanimation(int startx,int starty,std::vector<colorpos>& colors);
 
-  static int DrawPixel();
+  static void DrawPixel(glm::vec3 color, int x, int y);
   static glm::vec3 TraceRay(double i, double j);
   static void TraceRayHelper(double x, double y, glm::vec3& color, int gridSize, int max_d);
   static glm::vec3 GetPos(double i, double j);
