@@ -79,6 +79,7 @@ glm::vec3 RayTracer::TraceRay(Ray &ray, Hit &hit, int bounce_count) {
   if (args->gather_indirect) {
     // photon mapping for more accurate indirect light
     std::vector<Photon> photons;
+    directly_illuminated = true;
     double radius = 0.05;
     photon_mapping->GatherPhotons(point,normal,ray.getDirection(),photons,radius);
     answer = diffuse_color * (photon_mapping->GatherIndirect(point,normal,ray.getDirection(),photons,radius) + args->ambient_light);
@@ -86,8 +87,7 @@ glm::vec3 RayTracer::TraceRay(Ray &ray, Hit &hit, int bounce_count) {
     unsigned int count_direct = 0;
     unsigned int count_shadow = 0;
     photon_mapping->ShadowCounts(photons, count_direct, count_shadow);
-    if (count_shadow == 0) directly_illuminated = true;
-    else if (count_direct == 0) completely_shadowed = true;
+    if (count_shadow > args->num_photons_to_collect/2) completely_shadowed = true;
   } else {
     // the usual ray tracing hack for indirect light
     answer = diffuse_color * args->ambient_light;
@@ -106,9 +106,8 @@ glm::vec3 RayTracer::TraceRay(Ray &ray, Hit &hit, int bounce_count) {
       glm::vec3 dirToLightCentroid = glm::normalize(lightCentroid-point);
       float distToLightCentroid = glm::length(lightCentroid-point);
 
-      if (args->num_shadow_samples == 0 || directly_illuminated)
+      if (args->num_shadow_samples == 0 || (directly_illuminated && !completely_shadowed))
         answer += m->Shade(ray,hit,dirToLightCentroid,lightColor/float(M_PI*distToLightCentroid*distToLightCentroid),args);
-      else if (completely_shadowed) {}
       else if (args->num_shadow_samples == 1) {
         Hit shadHit = Hit();
         Ray toLight = Ray(point,dirToLightCentroid);
