@@ -40,7 +40,8 @@ void PhotonMapping::TracePhoton(const glm::vec3 &position, const glm::vec3 &dire
     newPosition = hit.getT()*direction+position;
 
     //Store in kdtree
-    kdtree->AddPhoton(Photon(newPosition,direction,energy,normal,iter));
+    if (iter>0 || glm::length(energy) == 0)
+      kdtree->AddPhoton(Photon(newPosition,direction,energy,normal,iter));
 
     //Shadow Photons
     if (iter == 0)
