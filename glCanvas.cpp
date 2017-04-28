@@ -181,7 +181,7 @@ void GLCanvas::animate(){
   }
 
   if (args->raytracing_animation) {
-    int num_threads = 9;
+    int num_threads = args->num_threads;
     std::vector<std::vector<colorpos> > colors(num_threads);
     std::vector<std::thread> threads;
     for (int i=0;i<num_threads;i++) {

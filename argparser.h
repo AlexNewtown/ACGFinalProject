@@ -115,6 +115,8 @@ public:
 	num_photons_to_collect = atoi(argv[i]);
       } else if (std::string(argv[i]) == std::string("-gather_indirect")) {
 	gather_indirect = true;
+      } else if (std::string(argv[i]) == std::string("-num_threads")) {
+        num_threads = atoi(argv[i]);
       } else {
 	std::cout << "ERROR: unknown command line argument " 
 		  << i << ": '" << argv[i] << "'" << std::endl;
@@ -163,6 +165,7 @@ public:
     num_glossy_samples = 1;
     ambient_light = glm::vec3(0.1,0.1,0.1);
     intersect_backfacing = false;
+    num_threads = 9;
 
     // PHOTON MAPPING PARAMETERS
     render_photons = true;
@@ -202,6 +205,7 @@ public:
   int num_glossy_samples;
   glm::vec3 ambient_light;
   bool intersect_backfacing;
+  int num_threads;
 
   // PHOTON MAPPING PARAMETERS
   int num_photons_to_shoot;
