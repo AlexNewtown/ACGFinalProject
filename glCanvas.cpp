@@ -186,7 +186,7 @@ void GLCanvas::animate(){
     std::vector<std::thread> threads;
     for (int i=0;i<num_threads;i++) {
       threads.push_back(std::thread(subanimation,raytracing_x,raytracing_y,std::ref(colors[i])));
-    //  subanimation(raytracing_x,raytracing_y,colors[i]);
+      //subanimation(raytracing_x,raytracing_y,colors[i]);
       raytracing_y -= 1;
     }
 

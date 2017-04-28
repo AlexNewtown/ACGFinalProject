@@ -20,7 +20,9 @@ public:
   Face(Material *m) {
     edge = NULL;
     subCorners = NULL;
-    material = m; }
+    material = m;
+    assert(m != NULL);
+  }
 
   // =========
   // ACCESSORS
@@ -41,8 +43,8 @@ public:
     return edge;
   }
   glm::vec3 computeCentroid() const {
-    if ((*this)[0] == (*this)[3])
-      return 0.25f * ((*this)[0]->get() +
+    if (isTri())
+      return 0.33f * ((*this)[0]->get() +
                     (*this)[1]->get() +
                     (*this)[2]->get());
     return 0.25f * ((*this)[0]->get() +
