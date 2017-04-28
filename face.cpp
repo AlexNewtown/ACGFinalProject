@@ -112,9 +112,7 @@ bool Face::intersect(const Ray &r, Hit &h, bool intersect_backfacing) const {
   Vertex *c = (*this)[2];
   Vertex *d = (*this)[3];
   if (isTri()) {
-    bool hit = triangle_intersect(r,h,a,b,c,intersect_backfacing);
-    //if (hit) printf("hit!\n");
-    return hit;
+    return triangle_intersect(r,h,a,b,c,intersect_backfacing);
   }
   return triangle_intersect(r,h,a,b,c,intersect_backfacing) || triangle_intersect(r,h,a,c,d,intersect_backfacing);
 }
@@ -123,11 +121,7 @@ bool Face::triangle_intersect(const Ray &r, Hit &h, Vertex *a, Vertex *b, Vertex
 
   // compute the intersection with the plane of the triangle
   Hit h2 = Hit(h);
-  if (!plane_intersect(r,h2,intersect_backfacing)) {
-    if (isTri())
-      //printf("failed plane intersect\n");
-    return 0;
-  }
+  if (!plane_intersect(r,h2,intersect_backfacing)) return 0;
 
   // figure out the barycentric coordinates:
   glm::vec3 Ro = r.getOrigin();
@@ -142,10 +136,7 @@ bool Face::triangle_intersect(const Ray &r, Hit &h, Vertex *a, Vertex *b, Vertex
                      a->get().z-b->get().z,a->get().z-c->get().z,Rd.z);
   float detA = glm::determinant(detA_mat);
 
-  if (fabs(detA) <= 0.000001) {
-    //if (isTri()) printf("failed detA\n");
-    return 0;
-  }
+  if (fabs(detA) <= 0.000001) return 0;
   assert (fabs(detA) >= 0.000001);
 
   glm::mat3 beta_mat(a->get().x-Ro.x,a->get().x-c->get().x,Rd.x,
@@ -173,11 +164,9 @@ bool Face::triangle_intersect(const Ray &r, Hit &h, Vertex *a, Vertex *b, Vertex
       assert(this->material != NULL);
       h.setMaterial(this->material);
     }
-    assert(h.getMaterial() != NULL);
     return 1;
   }
   
-  //if (isTri()) printf("failed triangle intersect\n");
   return 0;
 }
 
