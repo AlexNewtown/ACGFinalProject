@@ -26,7 +26,7 @@ PhotonMapping::~PhotonMapping() {
 // Recursively trace a single photon
 
 void PhotonMapping::TracePhoton(const glm::vec3 &position, const glm::vec3 &direction,
-				const glm::vec3 &energy, int iter) {
+				const glm::vec3 &energy, int iter, bool caustic) {
 
     Hit hit;
     bool intersect = raytracer->CastRay(Ray(position+(0.0001*direction),direction),hit,false);
@@ -40,25 +40,28 @@ void PhotonMapping::TracePhoton(const glm::vec3 &position, const glm::vec3 &dire
     newPosition = hit.getT()*direction+position;
 
     //Store in kdtree
-    if (iter>0 || glm::length(energy) == 0)
-      kdtree->AddPhoton(Photon(newPosition,direction,energy,normal,iter));
-
+    if (iter>0 || glm::length(energy) == 0) {
+      if (caustic)
+        kdtree->AddPhoton(Photon(newPosition,direction,energy+.02f*glm::vec3(0,1,0),normal,iter));
+      else
+        kdtree->AddPhoton(Photon(newPosition,direction,energy,normal,iter));
+    }
     //Shadow Photons
     if (iter == 0)
-      TracePhoton(newPosition+(0.0001*direction), direction, glm::vec3(0.0,0.0,0.0), iter);
+      TracePhoton(newPosition+(0.0001*direction), direction, glm::vec3(0.0,0.0,0.0), iter,false);
 
     //Reflective
     newEnergy = energy*mat->getReflectiveColor();
     newDirection = MirrorDirection(normal,direction);
     if (glm::length(newEnergy) > EPSILON/100) {
-      TracePhoton(newPosition,newDirection,newEnergy,iter+1);
+      TracePhoton(newPosition,newDirection,newEnergy,iter+1,true);
     }
 
     //Diffuse
     newEnergy = energy*mat->getDiffuseColor();
     newDirection = RandomDiffuseDirection(normal);
     if (glm::length(newEnergy) > EPSILON/100) {
-      TracePhoton(newPosition,newDirection,newEnergy,iter+1);
+      TracePhoton(newPosition,newDirection,newEnergy,iter+1,false);
     }
 
 }
@@ -103,7 +106,7 @@ void PhotonMapping::TracePhotons() {
       glm::vec3 start = lights[i]->RandomPoint();
       // the initial direction for this photon (for diffuse light sources)
       glm::vec3 direction = RandomDiffuseDirection(normal);
-      TracePhoton(start+(0.0001*direction),direction,energy,0);
+      TracePhoton(start+(0.0001*direction),direction,energy,0,false);
     }
   }
 }

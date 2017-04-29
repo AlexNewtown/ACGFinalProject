@@ -6,7 +6,7 @@
 #include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-// for sleep 	
+// for sleep
 #if defined(_WIN32)
 #include <windows.h>
 #else
@@ -27,31 +27,36 @@ int main(int argc, char *argv[]) {
 
   // parse the command line arguments
   ArgParser args(argc, argv);
-  GLCanvas::initialize(&args); 
+  GLCanvas::initialize(&args);
 
   glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
   glEnable(GL_DEPTH_TEST);
-  glDepthFunc(GL_LESS); 
+  glDepthFunc(GL_LESS);
 
   while (!glfwWindowShouldClose(GLCanvas::window))  {
-    
+
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glUseProgram(GLCanvas::programID);
     GLCanvas::camera->glPlaceCamera();
 
-    glm::mat4 ModelMatrix = glm::mat4(); 
-  
+    glm::mat4 ModelMatrix = glm::mat4();
+
     // Build the matrix to position the camera based on keyboard and mouse input
     glm::mat4 ProjectionMatrix = GLCanvas::camera->getProjectionMatrix();
     glm::mat4 ViewMatrix = GLCanvas::camera->getViewMatrix();
 
     GLCanvas::drawVBOs(ProjectionMatrix,ViewMatrix,ModelMatrix);
+    if (args.auto_raytrace) {
+      GLCanvas::keyboardCB(GLCanvas::window,'p',0,GLFW_PRESS,0);
+      GLCanvas::keyboardCB(GLCanvas::window,'g',0,GLFW_PRESS,0);
+      args.auto_raytrace = false;
+    }
     GLCanvas::animate();
 
     // Swap buffers
     glfwSwapBuffers(GLCanvas::window);
     fflush(stdout);
-    glfwPollEvents();  
+    glfwPollEvents();
     fflush(stdout);
 
 #if defined(_WIN32)
@@ -61,10 +66,10 @@ int main(int argc, char *argv[]) {
 #endif
 
   }
-  
+
   GLCanvas::cleanupVBOs();
   glDeleteProgram(GLCanvas::programID);
-  
+
   // Close OpenGL window and terminate GLFW
   glfwDestroyWindow(GLCanvas::window);
   glfwTerminate();
@@ -73,4 +78,3 @@ int main(int argc, char *argv[]) {
 
 // ====================================================================
 // ====================================================================
-

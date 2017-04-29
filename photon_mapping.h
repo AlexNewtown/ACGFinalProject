@@ -49,7 +49,7 @@ class PhotonMapping {
   private:
 
   // trace a single photon
-  void TracePhoton(const glm::vec3 &position, const glm::vec3 &direction, const glm::vec3 &energy, int iter);
+  void TracePhoton(const glm::vec3 &position, const glm::vec3 &direction, const glm::vec3 &energy, int iter, bool caustic);
   bool checkCache();
 
   // REPRESENTATION
