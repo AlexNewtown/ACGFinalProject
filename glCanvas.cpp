@@ -181,12 +181,12 @@ void GLCanvas::animate(){
   }
 
   if (args->raytracing_animation) {
-    int num_threads = 9;
+    int num_threads = args->num_threads;
     std::vector<std::vector<colorpos> > colors(num_threads);
     std::vector<std::thread> threads;
     for (int i=0;i<num_threads;i++) {
       threads.push_back(std::thread(subanimation,raytracing_x,raytracing_y,std::ref(colors[i])));
-    //  subanimation(raytracing_x,raytracing_y,colors[i]);
+      //subanimation(raytracing_x,raytracing_y,colors[i]);
       raytracing_y -= 1;
     }
 
@@ -195,6 +195,12 @@ void GLCanvas::animate(){
       for (int j=0;j<colors[i].size();j++) {
         DrawPixel(colors[i][j].color,colors[i][j].x,colors[i][j].y);
       }
+    }
+    if (args->raytracing_animation == false) {
+      time_t end_time = time(NULL);
+      double seconds = difftime(end_time, start_time);
+      printf("finished ray tracing in %.f seconds\n", seconds);
+      printf("used %u shadow rays\n", raytracer->shadow_rays);
     }
     raytracer->setupVBOs();
   }
@@ -216,10 +222,6 @@ void GLCanvas::subanimation(int startx, int starty,std::vector<colorpos> &colors
           y >= args->height ||
           y < 0) {
         // stop rendering, matches resolution of current camera
-        time_t end_time = time(NULL);
-        double seconds = difftime(end_time, start_time);
-        printf("finished ray tracing in %.f seconds\n", seconds);
-        printf("used %u shadow rays\n", raytracer->shadow_rays);
         args->raytracing_animation = false;
         break;
       }
@@ -642,6 +644,7 @@ int GLCanvas::DrawPixel() {
       raytracer->render_to_a = true;
     }
   }
+  return 0;
 }
 
 void GLCanvas::DrawPixel(glm::vec3 color, int x, int y) {

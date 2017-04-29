@@ -269,17 +269,18 @@ void Radiosity::setupVBOs() {
         glm::vec3 pos = ((*f)[j])->get();
         double s = (*f)[j]->get_s();
         double t = (*f)[j]->get_t();
-        glm::vec3 color = setupHelperForColor(f,i,j);
+        //glm::vec3 color = setupHelperForColor(f,i,j);
+        glm::vec3 color = glm::vec3(0.0,1.0,0.0);
         color = glm::vec3(linear_to_srgb(color.r),
                           linear_to_srgb(color.g),
                           linear_to_srgb(color.b));
-        avg_color += 0.25f * color;
+        avg_color += 0.33f * color;
         mesh_tri_verts.push_back(VBOPosNormalColor(pos,normal,
                                                    glm::vec4(color.r,color.g,color.b,1.0),
                                                    wireframe_color,
                                                    s,t));
-        avg_s += 0.25 * s;
-        avg_t += 0.25 * t;
+        avg_s += 0.33 * s;
+        avg_t += 0.33 * t;
         e = e->getNext();
       }
     }

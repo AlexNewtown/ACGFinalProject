@@ -118,7 +118,7 @@ glm::vec3 RayTracer::TraceRay(Ray &ray, Hit &hit, int bounce_count) {
         if (rayhit && shadHit.getMaterial() == f->getMaterial())
           answer += m->Shade(ray,hit,dirToLightCentroid,myLightColor,args);
       } else {
-      //  answer += m->Shade(ray,hit,dirToLightCentroid,glm::vec3(0,0,1),args); // TESTING blue
+        //answer += m->Shade(ray,hit,dirToLightCentroid,glm::vec3(0,0,1),args); // TESTING blue
         int gridSize = (int)sqrt(args->num_shadow_samples);
         int gridSquare = square(gridSize);
         for (int j=0;j<gridSize;j++) {

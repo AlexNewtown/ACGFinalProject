@@ -42,6 +42,9 @@ public:
   float get_t() const { return texture_t; }
 
   // MODIFIER
+  void setMaterial(Material* m) {
+    material = m;
+  }
   void set(float _t, Material *m, glm::vec3 n) {
     t = _t; material = m; normal = n; 
     texture_s = 0; texture_t = 0; }

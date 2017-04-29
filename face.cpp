@@ -9,10 +9,10 @@ float Face::getArea() const {
   glm::vec3 b = (*this)[1]->get();
   glm::vec3 c = (*this)[2]->get();
   glm::vec3 d = (*this)[3]->get();
-  if (d == a) {
+  if (isTri()) {
     return AreaOfTriangle(DistanceBetweenTwoPoints(a,b),
-                   DistanceBetweenTwoPoints(a,c),
-                   DistanceBetweenTwoPoints(b,c));
+                   DistanceBetweenTwoPoints(b,c),
+                   DistanceBetweenTwoPoints(c,a));
   }
   return
     AreaOfTriangle(DistanceBetweenTwoPoints(a,b),
@@ -111,7 +111,9 @@ bool Face::intersect(const Ray &r, Hit &h, bool intersect_backfacing) const {
   Vertex *b = (*this)[1];
   Vertex *c = (*this)[2];
   Vertex *d = (*this)[3];
-  if (d == a) return triangle_intersect(r,h,a,b,c,intersect_backfacing);
+  if (isTri()) {
+    return triangle_intersect(r,h,a,b,c,intersect_backfacing);
+  }
   return triangle_intersect(r,h,a,b,c,intersect_backfacing) || triangle_intersect(r,h,a,c,d,intersect_backfacing);
 }
 
@@ -158,9 +160,13 @@ bool Face::triangle_intersect(const Ray &r, Hit &h, Vertex *a, Vertex *b, Vertex
     float t_t = alpha * a->get_t() + beta * b->get_t() + gamma * c->get_t();
     h.setTextureCoords(t_s,t_t);
     assert (h.getT() >= EPSILON);
+    if (h.getMaterial() == NULL) {
+      assert(this->material != NULL);
+      h.setMaterial(this->material);
+    }
     return 1;
   }
-
+  
   return 0;
 }
 
@@ -190,6 +196,7 @@ bool Face::plane_intersect(const Ray &r, Hit &h, bool intersect_backfacing) cons
 
   float t = numer / denom;
   if (t > EPSILON && t < h.getT()) {
+    assert(this->getMaterial() != NULL);
     h.set(t,this->getMaterial(),normal);
     assert (h.getT() >= EPSILON);
     return 1;
@@ -213,5 +220,6 @@ glm::vec3 Face::computeNormal() const {
   glm::vec3 b = (*this)[1]->get();
   glm::vec3 c = (*this)[2]->get();
   glm::vec3 d = (*this)[3]->get();
+  if (isTri()) return ComputeNormal(a,b,c);
   return 0.5f * (ComputeNormal(a,b,c) + ComputeNormal(a,c,d));
 }

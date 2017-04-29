@@ -116,7 +116,10 @@ public:
       } else if (std::string(argv[i]) == std::string("-gather_indirect")) {
 	gather_indirect = true;
 } else if (std::string(argv[i]) == std::string("-auto_raytrace")) {
-	i++; auto_raytrace = true;} else {
+	auto_raytrace = true;
+} else if (std::string(argv[i]) == std::string("-num_threads")) {
+	i++; num_threads = atoi(argv[i]);
+} else {
 	std::cout << "ERROR: unknown command line argument "
 		  << i << ": '" << argv[i] << "'" << std::endl;
 	exit(1);
@@ -165,6 +168,7 @@ public:
     ambient_light = glm::vec3(0.1,0.1,0.1);
     intersect_backfacing = false;
 		auto_raytrace = false;
+    num_threads = 9;
 
     // PHOTON MAPPING PARAMETERS
     render_photons = true;
@@ -205,6 +209,7 @@ public:
   glm::vec3 ambient_light;
   bool intersect_backfacing;
 	bool auto_raytrace;
+  int num_threads;
 
   // PHOTON MAPPING PARAMETERS
   int num_photons_to_shoot;
