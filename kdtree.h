@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <vector>
 #include <algorithm>
+#include <mutex>
 #include "boundingbox.h"
 #include "photon.h"
 
@@ -63,6 +64,7 @@ class KDTree {
   float split_value;
   std::vector<Photon> photons;
   int depth;
+  std::mutex nodeMutex;
 };
 
 bool sortByX(const Photon &a, const Photon &b);

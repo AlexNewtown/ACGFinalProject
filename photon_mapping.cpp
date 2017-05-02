@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <algorithm>
+#include <queue>
 #include <glm/gtx/string_cast.hpp>
 
 #include "argparser.h"
@@ -19,6 +20,7 @@
 PhotonMapping::~PhotonMapping() {
   // cleanup all the photons
   delete kdtree;
+  delete irradianceCache;
 }
 
 
@@ -42,9 +44,30 @@ void PhotonMapping::TracePhoton(const glm::vec3 &position, const glm::vec3 &dire
     //Store in kdtree
     if (iter>0 || glm::length(energy) == 0) {
       if (caustic)
-        kdtree->AddPhoton(Photon(newPosition,direction,energy+.02f*glm::vec3(0,1,0),normal,iter));
-      else
         kdtree->AddPhoton(Photon(newPosition,direction,energy,normal,iter));
+      else {
+        // BoundingBox query;
+        // std::vector<Photon> tmp, close;
+        // float dist = .05;
+        // int num_close_photons = 10;
+        // query.Set(newPosition-glm::vec3(dist),glm::vec3(dist)+newPosition);
+        // irradianceCache->CollectPhotonsInBox(query,tmp);
+        // for (int i=0;i<tmp.size();i++)
+        //   if (glm::length(newPosition-tmp[i].getPosition())<dist && glm::length(newEnergy-tmp[i].getEnergy())<EPSILON && glm::length(newEnergy-tmp[i].getEnergy())<EPSILON)
+        //     close.push_back(tmp[i]);
+        // if (close.size() < num_close_photons)
+          irradianceCache->AddPhoton(Photon(newPosition,direction,energy,normal,iter));
+        // else if (iter > 0) {
+        //   for (int i=0;i<close.size();i++) {
+        //     if (glm::length(newPosition-close[i].getPosition()) > EPSILON) {
+        //       glm::vec3 interpolatedEnergy = close[i].getEnergy();
+        //       interpolatedEnergy += newEnergy/(num_close_photons*square(glm::length(newPosition-close[i].getPosition())));
+        //       close[i].setEnergy(interpolatedEnergy);
+        //       irradianceCache->UpdatePhoton(close[i]);
+        //     }
+        //   }
+        // }
+      }
     }
     //Shadow Photons
     if (iter == 0)
@@ -75,6 +98,7 @@ void PhotonMapping::TracePhotons() {
 
   // first, throw away any existing photons
   delete kdtree;
+  delete irradianceCache;
 
   // consruct a kdtree to store the photons
   BoundingBox *bb = mesh->getBoundingBox();
@@ -84,6 +108,7 @@ void PhotonMapping::TracePhotons() {
   min -= 0.001f*diff;
   max += 0.001f*diff;
   kdtree = new KDTree(BoundingBox(min,max));
+  irradianceCache = new KDTree(BoundingBox(min,max));
 
   // photons emanate from the light sources
   const std::vector<Face*>& lights = mesh->getLights();
@@ -102,11 +127,20 @@ void PhotonMapping::TracePhotons() {
     // the initial energy for this photon
     glm::vec3 energy = my_area/float(num) * lights[i]->getMaterial()->getEmittedColor();
     glm::vec3 normal = lights[i]->computeNormal();
+    std::queue<std::thread> threadQueue;
+    std::cout<<std::thread::hardware_concurrency()<<std::endl;
     for (int j = 0; j < num; j++) {
       glm::vec3 start = lights[i]->RandomPoint();
       // the initial direction for this photon (for diffuse light sources)
       glm::vec3 direction = RandomDiffuseDirection(normal);
-      TracePhoton(start+(0.0001*direction),direction,energy,0,false);
+      while (threadQueue.size() > args->num_threads) {
+        if (threadQueue.front().joinable()) {
+          threadQueue.front().join();
+          threadQueue.pop();
+        }
+      }
+      threadQueue.push(std::thread(&PhotonMapping::TracePhoton,this,start+(0.0001*direction),(direction),(energy),0,false));
+      //TracePhoton(start+(0.0001*direction),(direction),(energy),0,false);
     }
   }
 }
@@ -134,12 +168,13 @@ void PhotonMapping::GatherPhotons(const glm::vec3 &point, const glm::vec3 &norma
     BoundingBox bb(min, max);
     std::vector<Photon> bb_photons;
     kdtree->CollectPhotonsInBox(bb, bb_photons);
+    irradianceCache->CollectPhotonsInBox(bb,bb_photons);
     for (unsigned int i = 0; i < bb_photons.size(); ++i) {
       if (fabs(glm::distance(point, bb_photons[i].getPosition()) < radius)) {
         photons.push_back(bb_photons[i]);
       }
     }
-  } while (photons.size() < (unsigned)args->num_photons_to_collect);
+  } while (photons.size() < (unsigned)args->num_photons_to_collect && 1.0f/square(radius) > EPSILON);
   //} while (false);
 
 }
@@ -209,6 +244,7 @@ void PhotonMapping::setupVBOs() {
   if (kdtree == NULL) return;
   std::vector<const KDTree*> todo;
   todo.push_back(kdtree);
+  todo.push_back(irradianceCache);
   while (!todo.empty()) {
     const KDTree *node = todo.back();
     todo.pop_back();

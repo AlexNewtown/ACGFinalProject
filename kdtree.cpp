@@ -54,15 +54,18 @@ bool KDTree::overlaps(const BoundingBox &bb) const {
 void KDTree::AddPhoton(const Photon &p) {
   const glm::vec3 &position = p.getPosition();
   assert (PhotonInCell(p));
+  nodeMutex.lock();
   if (isLeaf()) {
     // this cell is a leaf node
     photons.push_back(p);
     if (photons.size() > MAX_PHOTONS_BEFORE_SPLIT && depth < MAX_DEPTH) {
       SplitCell();
     }
+    nodeMutex.unlock();
   } else {
     // this cell is not a leaf node
     // decide which subnode to recurse into
+    nodeMutex.unlock();
     if (split_axis == 0) {
       if (position.x < split_value)
 	     child1->AddPhoton(p);
@@ -204,6 +207,7 @@ void KDTree::SplitCell() {
   std::vector<Photon> tmp = photons;
   photons.clear();
   // add all the photons to one of those children
+  nodeMutex.unlock();
   for (int i = 0; i < num_photons; i++) {
     const Photon &p = tmp[i];
     this->AddPhoton(p);
