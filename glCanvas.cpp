@@ -112,7 +112,7 @@ void GLCanvas::initialize(ArgParser *_args) {
   if (glewInit() != GLEW_OK) {
     std::cerr << "ERROR: Failed to initialize GLEW" << std::endl;
     glfwTerminate();
-    exit(1);
+exit(1);
   }
 
   // there seems to be a "GL_INVALID_ENUM" error in glewInit that is a
@@ -209,7 +209,7 @@ void GLCanvas::animate(){
 void GLCanvas::subanimation(int startx, int starty,std::vector<colorpos> &colors) {
   int x = startx;
   int y = starty;
-  for (int j = 0; j < 500; j++) {
+  for (int j = 0; j < args->width; j++) {
     if (x >= raytracing_divs_x) {
       // end of row
       x = 0;
@@ -408,6 +408,10 @@ void GLCanvas::keyboardCB(GLFWwindow* window, int key, int scancode, int action,
   // other normal ascii keys...
   if ( (action == GLFW_PRESS || action == GLFW_REPEAT) && key < 256) {
     switch (key) {
+    case 'd': case 'D': {
+      printf("verticies %d\n", radiosity->getMesh()->numVertices());
+      break;
+    }
     // RAYTRACING STUFF
     case 'r':  case 'R':  case 'g':  case 'G': {
       args->raytracing_animation = !args->raytracing_animation;

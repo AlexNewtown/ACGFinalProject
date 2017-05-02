@@ -10,6 +10,8 @@ shadow_photons
 no shadow_photons
 904s
 
+====================
+
 reflective ring
 100,000 photons
 50 collect
@@ -25,3 +27,104 @@ no_shadow_photons
 ----
 100s
 1,195,516 shadow rays
+
+
+===================
+
+reflective spheres
+500,000 photons
+50 collect
+25 shadow
+25 antialias
+size 1000 1000
+no iter 0 photons, caustic photons
+
+3,100s
+98,601,382 shadow rays
+
+
+=================
+
+reflective ring
+100,000 photons
+50 collect
+25 shadow
+25 antialias
+size 1000 1000
+no iter 0 photons, no caustic photons
+
+3,858s
+150,010,935 shadow rays
+
+================
+
+reflective ring
+500,000 photons
+1000 collect
+25 shadow
+25 antialias
+size 500 500
+no iter 0 photons, no caustic photons
+
+4,896s
+55,763,743 shadow rays
+
+=============
+shadow photons imperfect 2
+reflective ring
+100,000 photons
+50 collect
+4 shadow
+1 antialias
+size 500 500
+no iter 0 photons, no caustic photons
+
+44s ray trace
+503,848 shadow rays
+
+-------------
+shadow photons perfect
+reflective ring
+100,00 photons
+50 collect
+4 shadow
+1 antialias
+size 500 500
+iter 0 photons, no caustic photons
+
+39s
+465,342 shadow rays
+--------------------
+no shadow photons
+
+42s ray trace
+1,194,985 shadow rays
+
+==========================
+multithread benchmarks
+
+reflective ring
+100,00 photons
+50 collect
+4 shadow
+4 antialias
+size 500 500
+iter 0 photons, no caustic photons
+5 threads
+
+170s
+1,857,767 shadow rays
+---------
+1 thread
+
+385s
+1,857,420 shadow rays
+==========================
+40k bunny
+ray traced default settings
+
+6,259s
+228,275 shadow rays
+=========================
+
+

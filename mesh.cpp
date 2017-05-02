@@ -333,7 +333,7 @@ void Mesh::Load(ArgParser *_args) {
       materials.push_back(new Material(texture_file,diffuse,reflective,emitted,roughness));
     } else {
       std::cout << "UNKNOWN TOKEN " << token << std::endl;
-      exit(0);
+      //exit(0);
     }
   }
   std::cout << " mesh loaded: " << numFaces() << " faces and " << numEdges() << " edges." << std::endl;

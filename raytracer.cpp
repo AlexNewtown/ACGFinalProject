@@ -71,15 +71,15 @@ glm::vec3 RayTracer::TraceRay(Ray &ray, Hit &hit, int bounce_count) {
   glm::vec3 point = ray.pointAtParameter(hit.getT());
   glm::vec3 answer;
 
+  bool in_shadowed = false;
+  bool completly_shadowed = false;
   bool directly_illuminated = false;
-  bool completely_shadowed = false;
   // ----------------------------------------------
   //  start with the indirect light (ambient light)
   glm::vec3 diffuse_color = m->getDiffuseColor(hit.get_s(),hit.get_t());
   if (args->gather_indirect) {
     // photon mapping for more accurate indirect light
     std::vector<Photon> photons;
-    directly_illuminated = true;
     double radius = 0.05;
     photon_mapping->GatherPhotons(point,normal,ray.getDirection(),photons,radius);
     answer = diffuse_color * (photon_mapping->GatherIndirect(point,normal,ray.getDirection(),photons,radius) + args->ambient_light);
@@ -87,7 +87,9 @@ glm::vec3 RayTracer::TraceRay(Ray &ray, Hit &hit, int bounce_count) {
     unsigned int count_direct = 0;
     unsigned int count_shadow = 0;
     photon_mapping->ShadowCounts(photons, count_direct, count_shadow);
-    if (count_shadow > args->num_photons_to_collect/2) completely_shadowed = true;
+    //if (count_shadow > args->num_photons_to_collect/4) in_shadowed = true;
+    if (count_direct == 0) completly_shadowed = true;
+    if (count_shadow == 0) directly_illuminated = true;
   } else {
     // the usual ray tracing hack for indirect light
     answer = diffuse_color * args->ambient_light;
@@ -106,8 +108,10 @@ glm::vec3 RayTracer::TraceRay(Ray &ray, Hit &hit, int bounce_count) {
       glm::vec3 dirToLightCentroid = glm::normalize(lightCentroid-point);
       float distToLightCentroid = glm::length(lightCentroid-point);
 
-      if (args->num_shadow_samples == 0 || (directly_illuminated && !completely_shadowed))
+      //if (args->num_shadow_samples == 0 || !in_shadowed)
+      if (args->num_shadow_samples == 0 || directly_illuminated)
         answer += m->Shade(ray,hit,dirToLightCentroid,lightColor/float(M_PI*distToLightCentroid*distToLightCentroid),args);
+      else if (completly_shadowed) {}
       else if (args->num_shadow_samples == 1) {
         Hit shadHit = Hit();
         Ray toLight = Ray(point,dirToLightCentroid);
