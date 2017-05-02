@@ -6,6 +6,7 @@
 #include <cassert>
 #include <string>
 #include <random>
+#include <thread>
 
 // VISUALIZATION MODES FOR RADIOSITY
 #define NUM_RENDER_MODES 6
@@ -168,7 +169,7 @@ public:
     ambient_light = glm::vec3(0.1,0.1,0.1);
     intersect_backfacing = false;
 		auto_raytrace = false;
-    num_threads = 9;
+    num_threads = std::thread::hardware_concurrency() + 1;
 
     // PHOTON MAPPING PARAMETERS
     render_photons = true;
